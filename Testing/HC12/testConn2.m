@@ -37,22 +37,29 @@ readLoop = tic;
 data = zeros(1000+1,20); % For reading IMU
 timestamps = datetime(zeros(10,1), 0, 0); %a 10x1 array of datetime
 disp("Starting loop")
-for i=1:1000
-    loop = tic;
-    val = 30+mod(i,10);
-    write(device,[245 val 0 val val 2],"uint8")
-%     [data(i,:), timestamps(i)] = read(joy_c_imu, 'latest');
-    java.lang.Thread.sleep(30); % It takes like 100ms to switch from reading something to writing something (limitation of the hardware)
-
+i = 1;
+loop = tic;
+while(1)
     if(device.NumBytesAvailable >= 1)
-        count = count + 1;
+        t = toc(loop);
+        wTimes(i) = t;
+        i=i+1;
+        loop = tic;
+        val = 20+mod(i,10);
         read(device,1,"uint8")
-        r = toc(readLoop);
-        rTimes(i) = r;
-        readLoop = tic;
+        write(device,[245 val 0 val val 2],"uint8");
+%         [data(i,:), timestamps(i)] = read(joy_c_imu, 'latest');
+
     end
-    t = toc(loop);
-    wTimes(i) = t;
+%     java.lang.Thread.sleep(30); % It takes like 100ms to switch from reading something to writing something (limitation of the hardware)
+
+%     if(device.NumBytesAvailable >= 1)
+%         count = count + 1;
+%         read(device,1,"uint8")
+%         r = toc(readLoop);
+%         rTimes(i) = r;
+%         readLoop = tic;
+%     end
 end
 
 for i=1:50

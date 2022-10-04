@@ -31,11 +31,25 @@ disp("Starting loop")
 global index;
 index = 1;
 j=1;
+
+
+euler = [];
+euler_rates = [];
 for i=1:1000
     loop = tic;
     val = 30+mod(i,10);
+
+    % Read data
     write(device,[245 val 0 val val 2],"uint8");
     [data(i,:), timestamps(i)] = read(joy_c_imu, 'latest');
+
+    % Parse data
+    [thx,thy,thz] = parse_ble_euler(data(i,3:8),10);
+     euler(i,:) = [thx,thy,thz];
+     [thx_rate,thy_rate,thz_rate] = parse_ble_euler(data(i,9:14),100);
+     euler_rates(i,:) = [thx_rate,thy_rate,thz_rate];
+    
+%     read(joy_c_imu, 'latest');
 
     java.lang.Thread.sleep(7); % It takes like 100ms to switch from reading something to writing something (limitation of the hardware)
     t = toc(loop);
@@ -48,23 +62,30 @@ for i=1:50
     write(device,[245 0 0 0 0 2],"uint8")
 end
 
+figure()
 plot(wTimes)
+
+figure()
+plot(euler)
+
+figure()
+plot(euler_rates)
 
 % unsubscribe(joy_c_imu);
 % clear joy_c_imu
 % clear b
 
-
-function displayCharacteristicData(src,evt)
-    global index;
-    global data;
-    global timestamps;
-    [d,t] = read(src, 'oldest');
-    disp(d)
-    disp(t)
-    data(index,:) = d;
-    timestamps(index) = t;
-    index=index+1;
-end
+% 
+% function displayCharacteristicData(src,evt)
+%     global index;
+%     global data;
+%     global timestamps;
+%     [d,t] = read(src, 'oldest');
+% %     disp(d)
+% %     disp(t)
+%     data(index,:) = d;
+%     timestamps(index) = t;
+%     index=index+1;
+% end
 
 
