@@ -50,12 +50,12 @@ theClient.Initialize(HostIP, HostIP);
 
 %% Connect to the Drone via Radio
 %Make sure to get the the Drone's MAC address before running this code -
-b = ble("C0286E324A33"); % ST DRONE FRAME 1
+b = ble("C02835321733"); % ST DRONE FRAME 1
 % b = ble("C0286E325133"); % FOAM CORE FRAME 1
 
 char = b.Characteristics; % Get the characteristics of the Drone
 
-device = serialport("COM5",115200)
+device = serialport("COM5",19200)
 flush(device)
 startByte = 245; 
 endByte = 2;
@@ -89,7 +89,7 @@ java.lang.Thread.sleep(2*1000); % Java sleep is much more accurate than matlab's
 % write(joy_c, [22, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
 
 %% Set up data collection vectors
-ITERATIONS = 250 % Main loop time period
+ITERATIONS = 1500 % Main loop time period
 WARMUP = 100; % Filter warmup time period
 
 % Data collection vectors
@@ -171,7 +171,7 @@ end
 disp("Starting")
 java.lang.Thread.sleep(5*1000); % Wait 5 seconds
 
-T_trim = 200;
+T_trim = 120;
 
 k = 1;
 dT = 1/60; % 55Hz (writing only) - look into if dT might be faster 
@@ -187,6 +187,7 @@ data = zeros(ITERATIONS+1,20); % For reading IMU
 timestamps = datetime(zeros(10,1), 0, 0); %a 10x1 array of datetime
 Drone_pos_data = [];
 Drone_rate_data = [];
+packetCount = [];
 
 z_ref_final = 0.7;
 xRefs = [];
@@ -239,21 +240,21 @@ while(k <= ITERATIONS)
     
     
    
-    % if K<750 do circ traj, else do 0 origin ref
-    if(TRAJECTORY == 0)
-        % Circular trajectory
-        x_ref = 0.5*cos(0.01*k);
-    else
-        % Position hover trajectory
-        x_ref = x_f - sign(x_f)*0.25;
-        if(x_f < 0.25 && x_f > -0.25)
-            flag1 = 1;
-            x_ref = 0;
-        end
-        if(flag1==1)
-            x_ref = 0;
-        end
-    end
+    x_ref = 0;
+%     if(TRAJECTORY == 0)
+%         % Circular trajectory
+%         x_ref = 0.5*cos(0.01*k);
+%     else
+%         % Position hover trajectory
+%         x_ref = x_f - sign(x_f)*0.25;
+%         if(x_f < 0.25 && x_f > -0.25)
+%             flag1 = 1;
+%             x_ref = 0;
+%         end
+%         if(flag1==1)
+%             x_ref = 0;
+%         end
+%     end
     
     
 
@@ -262,21 +263,23 @@ while(k <= ITERATIONS)
     % Call the X Controller - Desired Roll
     [ddot_x_d, pid_output_x, X_pid] = Xcontroller(X_pid, x_ref, x_f, vx_f, dT, 1/CUT_OFF_FREQ_VEL,k);
     
-    
-    if(TRAJECTORY == 0)
-        % Circular trajectory
-        y_ref = 0.5*sin(0.01*k);
-    else
-        % Position hover trajectory
-        y_ref = y_f - sign(y_f)*0.25;
-        if(y_f < 0.25 && y_f > -0.25)
-            flag2 = 1;
-            y_ref = 0;
-        end
-        if(flag2==1)
-            y_ref = 0;
-        end
-    end
+
+
+    y_ref = 0;
+%     if(TRAJECTORY == 0)
+%         % Circular trajectory
+%         y_ref = 0.5*sin(0.01*k);
+%     else
+%         % Position hover trajectory
+%         y_ref = y_f - sign(y_f)*0.25;
+%         if(y_f < 0.25 && y_f > -0.25)
+%             flag2 = 1;
+%             y_ref = 0;
+%         end
+%         if(flag2==1)
+%             y_ref = 0;
+%         end
+%     end
     
     
 
@@ -308,6 +311,7 @@ while(k <= ITERATIONS)
 %     psi = 0;
     phi_d = -m/single(comm_thr_d) * (ddot_x_d*cos(psi) + ddot_y_d*sin(psi))* 180/pi; % MIGHT NEED TO REPLACE comm_thr_d with actual thrust sent to actuators on drone
     theta_d = m/single(comm_thr_d) * (-ddot_y_d*cos(psi) + ddot_x_d*sin(psi)) * 180/pi;
+    
 %     theta_d = 0.5; % Dont command y-pitch yet (0.5 offset)
 %     phi_d = 0.5; % Dont command x-roll yet
     
@@ -319,6 +323,7 @@ while(k <= ITERATIONS)
     slope_m = 255.0/(MAX_ANGLE - -MAX_ANGLE);
     comm_phi_d = uint8(slope_m *(phi_d + MAX_ANGLE));
     comm_theta_d = uint8(slope_m *(theta_d + MAX_ANGLE));
+    % Need a pitch offset
     
     %Send the command to the Drone
     wTime = tic;
@@ -342,6 +347,7 @@ while(k <= ITERATIONS)
      euler(k,:) = [thx,thy,thz];
      [thx_rate,thy_rate,thz_rate] = parse_ble_euler(data(k,9:14),100);
      euler_rates(k,:) = [thx_rate,thy_rate,thz_rate];
+     packetCount(k,:) = data(k,15:16);
     
     
     
@@ -350,7 +356,7 @@ while(k <= ITERATIONS)
     errors(k) = Y_pid.y_curr_error;
     sent_data(k, :) = [comm_thr_d, comm_phi_d, comm_theta_d];
     cont_actual_data(k, :) = [pid_output_x, pid_output_y, pid_output_z];
-    java.lang.Thread.sleep(6); % 10ms delay
+    java.lang.Thread.sleep(3); % 10ms delay
     
     loopTimes(k) = toc(startT);
 %     dT = loopTimes(k);
@@ -374,6 +380,7 @@ while(z_f > 0.1)
     
 
     z_ref = z_f - 0.10;
+    zRefs(k) = z_ref;
 
     % Get new drone position and store
     startTPos = tic;
@@ -433,15 +440,22 @@ while(z_f > 0.1)
     %Send the command to the Drone
     wTime = tic;
 %      write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
+    [data(k,:), timestamps(k)] = read(joy_c_imu, 'latest');
     write(device,[startByte, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, endByte],"uint8")%comm_thr_d
     wTimes(k) = toc(wTime);
     
+%     [thx,thy,thz] = parse_ble_euler(data(k,3:8),10);
+%      euler(k,:) = [thx,thy,thz];
+%      [thx_rate,thy_rate,thz_rate] = parse_ble_euler(data(k,9:14),100);
+%      euler_rates(k,:) = [thx_rate,thy_rate,thz_rate];
+     packetCount(k,:) = data(k,15:16);
+
     % Collect the data being sent
-%     errors(k) = Y_pid.y_curr_error;
-%     sent_data(k, :) = [comm_thr_d, comm_phi_d, comm_theta_d];
-%     cont_actual_data(k, :) = [pid_output_x, pid_output_y, pid_output_z];
-%     
-    java.lang.Thread.sleep(6); % 10ms delay
+    errors(k) = Y_pid.y_curr_error;
+    sent_data(k, :) = [comm_thr_d, comm_phi_d, comm_theta_d];
+    cont_actual_data(k, :) = [pid_output_x, pid_output_y, pid_output_z];
+
+    java.lang.Thread.sleep(3); % 10ms delay
 
     loopTimes(k) = toc(startT);
 %     dT = loopTimes(k);
@@ -456,26 +470,23 @@ end
 
 % Shut off drone
 disp("Shutting Down")
-% write(joy_c, [0, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
 write(device,[startByte, 128, 0, 128, 128, endByte],"uint8")
 ik = 0;
 while ik < 10
     %QUIT
-%     write(joy_c, [0, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
     write(device,[startByte, 128, 0, 128, 128, endByte],"uint8")
     java.lang.Thread.sleep(10);
     ik = ik+1;
 end
 
-write(joy_c, [0, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
-ik = 0;
-while ik < 10
-    %QUIT
-    write(joy_c, [0, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
-%     write(device,[startByte, 128, 0, 128, 128, endByte],"uint8")
-    java.lang.Thread.sleep(10);
-    ik = ik+1;
-end
+% write(joy_c, [0, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
+% ik = 0;
+% while ik < 10
+%     %QUIT
+%     write(joy_c, [0, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
+%     java.lang.Thread.sleep(10);
+%     ik = ik+1;
+% end
 % Finally, Close the Motive Client
 theClient.Uninitialize();
 
@@ -558,6 +569,8 @@ figure()
 plot(loopTimes)
 title("Loop time")
 
+figure()
+plot(packetCount)
 
 % Find timeshift (and corresponding time delay) through xcorr (time delay should be 10-15ms (ie. = read() time?))
 [c,lags] = xcorr(euler(:,1),Drone_pos_data(:,1)*(180/pi));

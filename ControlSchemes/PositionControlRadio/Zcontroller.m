@@ -4,9 +4,9 @@ function [T, pid_output, Z_pid_err] = Zcontroller(Z_pid, z_d, z, z_dot, dt, tau,
     
     %% -------------------- FIRST PID BLOCK ------------------------------
     % Gains
-    K_p = 60; % Increasing Kp can definitely decrease oscillations... it did for on-board tuning
-    K_i = 5; % 120,80,100
-    K_d = 30;
+    K_p = 150; %60, Increasing Kp can definitely decrease oscillations... it did for on-board tuning
+    K_i = 30; % 120,80,100
+    K_d = 120;
     
     % Proportional
     Z_pid_err.z_curr_error = z_d - z;
