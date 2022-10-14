@@ -3,9 +3,9 @@ function [y_acc_d, pid_output, Y_pid_err] = Ycontroller(Y_pid, y_d, y, y_dot, dt
     
     %% -------------------- FIRST PID BLOCK ------------------------------
     % Gains
-    K_p = 350; % Shouldnt do anything with 100 (maybe 1 degree commanded)
-    K_i = 5;
-    K_d = 200; %
+    K_p = 150; % Shouldnt do anything with 100 (maybe 1 degree commanded)
+    K_i = 15;
+    K_d = 50; %
     
     % Proportional
     Y_pid_err.y_curr_error = y_d - y;

@@ -34,7 +34,7 @@ if(ExperimentType == "C")
 else
     TRAJECTORY = 1; % 0 = circular, 1 = origin reference
 end
-
+TRAJECTORY = 1;
 
 %% Instantiate client object to run Motive API commands
 % https://optitrack.com/software/natnet-sdk/
@@ -89,7 +89,7 @@ java.lang.Thread.sleep(2*1000); % Java sleep is much more accurate than matlab's
 % write(joy_c, [22, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
 
 %% Set up data collection vectors
-ITERATIONS = 1000 % Main loop time period
+ITERATIONS = 1500 % Main loop time period
 WARMUP = 100; % Filter warmup time period
 
 % Data collection vectors
@@ -97,6 +97,7 @@ Drone_data = zeros(ITERATIONS + 2, 7);  % drone position data
 sent_data = zeros(ITERATIONS + 1, 3); % data sent to drone
 cont_actual_data = zeros(ITERATIONS + 1, 9);
 errors = [];
+desired_attitudes =  zeros(ITERATIONS + 1, 2);
 
 % X,Y,Z position data
 p_x = zeros(ITERATIONS + 1, 1);
@@ -107,6 +108,13 @@ p_z = zeros(ITERATIONS + 1, 1);
 f_v_x = zeros(ITERATIONS + 1, 1);
 f_v_y = zeros(ITERATIONS + 1, 1);
 f_v_z = zeros(ITERATIONS + 1, 1);
+
+% Timing diagnostics
+wTimes          = [];
+rTimes          = [];
+loopTimes       = [];
+sleepTimes      = [];
+getPosTimes     = [];
 
 %% Frequencies
 OUT_FREQ = 60; % 60Hz write only
@@ -179,16 +187,10 @@ disp("Running radio check (5 seconds)")
 disp("Starting")
 java.lang.Thread.sleep(5*1000); % Wait 5 seconds
 
-T_trim = 150;
+T_trim = 130;
 
 k = 1;
 dT = 1/60; % 55Hz (writing only) - look into if dT might be faster 
-wTimes          = [];
-rTimes          = [];
-
-loopTimes       = [];
-sleepTimes      = [];
-getPosTimes     = [];
 
 [prevDronePos] = GetDronePosition(theClient, Drone_ID);
 data = zeros(ITERATIONS+1,20); % For reading IMU
@@ -196,6 +198,7 @@ timestamps = datetime(zeros(10,1), 0, 0); %a 10x1 array of datetime
 Drone_pos_data = [];
 Drone_rate_data = [];
 packetCount = [];
+x_torques = [];
 
 z_ref_final = 0.7;
 xRefs = [];
@@ -249,20 +252,20 @@ while(k <= ITERATIONS)
     
    
     x_ref = 0;
-%     if(TRAJECTORY == 0)
-%         % Circular trajectory
-%         x_ref = 0.5*cos(0.01*k);
-%     else
-%         % Position hover trajectory
-%         x_ref = x_f - sign(x_f)*0.25;
-%         if(x_f < 0.25 && x_f > -0.25)
-%             flag1 = 1;
-%             x_ref = 0;
-%         end
-%         if(flag1==1)
-%             x_ref = 0;
-%         end
-%     end
+    if(TRAJECTORY == 0)
+        % Circular trajectory
+        x_ref = 0.5*cos(0.01*k);
+    else
+        % Position hover trajectory
+        x_ref = x_f - sign(x_f)*0.25;
+        if(x_f < 0.25 && x_f > -0.25)
+            flag1 = 1;
+            x_ref = 0;
+        end
+        if(flag1==1)
+            x_ref = 0;
+        end
+    end
     
     
 
@@ -274,20 +277,20 @@ while(k <= ITERATIONS)
 
 
     y_ref = 0;
-%     if(TRAJECTORY == 0)
-%         % Circular trajectory
-%         y_ref = 0.5*sin(0.01*k);
-%     else
-%         % Position hover trajectory
-%         y_ref = y_f - sign(y_f)*0.25;
-%         if(y_f < 0.25 && y_f > -0.25)
-%             flag2 = 1;
-%             y_ref = 0;
-%         end
-%         if(flag2==1)
-%             y_ref = 0;
-%         end
-%     end
+    if(TRAJECTORY == 0)
+        % Circular trajectory
+        y_ref = 0.5*sin(0.01*k);
+    else
+        % Position hover trajectory
+        y_ref = y_f - sign(y_f)*0.25;
+        if(y_f < 0.25 && y_f > -0.25)
+            flag2 = 1;
+            y_ref = 0;
+        end
+        if(flag2==1)
+            y_ref = 0;
+        end
+    end
     
     
 
@@ -334,36 +337,32 @@ while(k <= ITERATIONS)
     % Need a pitch offset
     
     %Send the command to the Drone
-    if k<100
-        wTime = tic;
-    %     write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
-        [data(k,:), timestamps(k)] = read(joy_c_imu, 'latest');
-        write(device,[startByte, 128, 0, 128, 128, endByte],"uint8") % comm_thr_d
-        wTimes(k) = toc(wTime);
-    else
+%     if k<100
+%         wTime = tic;
+%     %     write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
+%         [data(k,:), timestamps(k)] = read(joy_c_imu, 'latest');
+%         write(device,[startByte, 128, 0, 128, 128, endByte],"uint8") % comm_thr_d
+%         wTimes(k) = toc(wTime);
+%     else
         wTime = tic;
     %     write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
         [data(k,:), timestamps(k)] = read(joy_c_imu, 'latest');
         write(device,[startByte, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, endByte],"uint8") % comm_thr_d
         wTimes(k) = toc(wTime);
-    end
+%     end
     
     
     
     
     
-    
-    % READ AHRS DATA FROM DRONE
-     %[data(k,:), timestamps(k)] = 
-     %sensorValues(k,:) = parfeval(backgroundPool,@readIMU,1,joy_c_imu);
-
-     %joy_c_imu.DataAvailableFcn = @displayCharacteristicData;
+     %%%
      [thx,thy,thz] = parse_ble_euler(data(k,3:8),10);
      euler(k,:) = [thx,thy,thz];
      [thx_rate,thy_rate,thz_rate] = parse_ble_euler(data(k,9:14),100);
      euler_rates(k,:) = [thx_rate,thy_rate,thz_rate];
      packetCount(k,:) = data(k,15:16);
-    
+     torque = parse_ble(data(k, 19:20),1);
+     x_torques(k,:) = torque;
     
     
     
@@ -371,14 +370,18 @@ while(k <= ITERATIONS)
     errors(k) = Y_pid.y_curr_error;
     sent_data(k, :) = [comm_thr_d, comm_phi_d, comm_theta_d];
     cont_actual_data(k, :) = [pid_output_x, pid_output_y, pid_output_z];
-    java.lang.Thread.sleep(5); % 10ms delay
-    
+    desired_attitudes(k, :) = [theta_d, phi_d];
+
+    s = tic;
+    java.lang.Thread.sleep(5); % 15ms delay
+    sleepTimes(k) = toc(s);
+
+
     loopTimes(k) = toc(startT);
 %     dT = loopTimes(k);
     
     k = k+1;
 end
-% unsubscribe(joy_c_imu)
 
 
 
@@ -463,12 +466,16 @@ while(z_f > 0.1)
 %      euler(k,:) = [thx,thy,thz];
 %      [thx_rate,thy_rate,thz_rate] = parse_ble_euler(data(k,9:14),100);
 %      euler_rates(k,:) = [thx_rate,thy_rate,thz_rate];
-     packetCount(k,:) = data(k,15:16);
-
+     
+    %%%
+    packetCount(k,:) = data(k,15:16);
+    torque = parse_ble(data(k, 19:20),1);
+    x_torques(k,:) = torque;
     % Collect the data being sent
     errors(k) = Y_pid.y_curr_error;
     sent_data(k, :) = [comm_thr_d, comm_phi_d, comm_theta_d];
     cont_actual_data(k, :) = [pid_output_x, pid_output_y, pid_output_z];
+    desired_attitudes(k, :) = [theta_d, phi_d];
 
     java.lang.Thread.sleep(5); % 10ms delay
 
@@ -514,14 +521,16 @@ save(filename)
 %% Display Results
 close all
 
-%disp(sensorValues)
-
 figure()
 plot(Drone_data(:,5)*180/pi)
+% hold on;
+% plot(desired_attitudes(:,1))
 title("Pitch");
 
 figure()
 plot(Drone_data(:,6)*180/pi)
+% hold on;
+% plot(desired_attitudes(:,2))
 title("Roll");
 
 figure()
@@ -536,7 +545,7 @@ grid on;
 figure()
 hold on;
 plot(p_x)
-plot(x_ref*ones(size(p_x,1)));
+plot(xRefs);
 title("X");
 legend("X", "X_ref")
 axis([0 ITERATIONS -2 2])
@@ -544,7 +553,7 @@ axis([0 ITERATIONS -2 2])
 figure()
 hold on;
 plot(p_y)
-plot(y_ref*ones(size(p_y,1)));
+plot(yRefs);
 title("Y");
 legend("Y", "Y_ref")
 axis([0 ITERATIONS -2 2])
