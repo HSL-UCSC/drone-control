@@ -1,8 +1,14 @@
 # Hybrid Systems Lab - ST Drone Interface
-#### Based on the STEVAL-FCU001V1:
-* https://www.st.com/resource/en/data_brief/steval-fcu001v1.pdf
-* https://www.st.com/resource/en/product_presentation/steval-drone01_getting_started_guide.pdf
-* https://www.st.com/resource/en/user_manual/um2311-getting-started-with-the-stevalfcu001v1-flight-controller-unit-evaluation-board-for-mini-drones-stmicroelectronics.pdf
+An interface for ST Microelectronics STEVAL-FCU001V1 drone.
+
+## Features (include images and descriptions when I can)
+* Setpoint generator
+* Dynamic gain tuning
+* Battery life indicator, mode control indicator
+* Real-time data transmission to/from the drone
+* Packet loss fault detection, emergency on-board hover/land operation
+* Mechanism to switch between various controllers/estimators both on and off-board
 
 ## Running Experiments
 ...
+
