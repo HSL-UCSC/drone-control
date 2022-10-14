@@ -1,11 +1,11 @@
 clear;
 clc;
-device = serialport("COM5",115200)
+device = serialport("COM5",19200)
 flush(device)   
 close all
 
 % %% Connect to the Drone via Bluetooth
-b = ble("C02824365530"); % Make sure to get the the Drone's MAC address before running this code
+b = ble("C02835321733"); % Make sure to get the the Drone's MAC address before running this code
 joy_c = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00008000-0001-11E1-AC36-0002A5D5C51B") % Write w/out response
 joy_c_imu = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00E00000-0001-11E1-AC36-0002A5D5C51B") % Read IMU
 % joy_c_imu.DataAvailableFcn = @displayCharacteristicData
@@ -35,12 +35,13 @@ j=1;
 
 euler = [];
 euler_rates = [];
-for i=1:1000
+packetCount = [];
+for i=1:500
     loop = tic;
     val = 30+mod(i,10);
 
     % Read data
-    write(device,[245 val 0 val val 2],"uint8");
+    write(device,[245 val val val val 2],"uint8");
     [data(i,:), timestamps(i)] = read(joy_c_imu, 'latest');
 
     % Parse data
@@ -48,10 +49,10 @@ for i=1:1000
      euler(i,:) = [thx,thy,thz];
      [thx_rate,thy_rate,thz_rate] = parse_ble_euler(data(i,9:14),100);
      euler_rates(i,:) = [thx_rate,thy_rate,thz_rate];
-    
+     packetCount(i,:) = data(i,15:16);
 %     read(joy_c_imu, 'latest');
 
-    java.lang.Thread.sleep(7); % It takes like 100ms to switch from reading something to writing something (limitation of the hardware)
+    java.lang.Thread.sleep(6); % It takes like 100ms to switch from reading something to writing something (limitation of the hardware)
     t = toc(loop);
     wTimes(i) = t;
 end
@@ -62,6 +63,7 @@ for i=1:50
     write(device,[245 0 0 0 0 2],"uint8")
 end
 
+%%
 figure()
 plot(wTimes)
 
@@ -70,6 +72,10 @@ plot(euler)
 
 figure()
 plot(euler_rates)
+
+figure()
+plot(packetCount)
+
 
 % unsubscribe(joy_c_imu);
 % clear joy_c_imu

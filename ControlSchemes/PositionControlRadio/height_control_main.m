@@ -89,7 +89,7 @@ java.lang.Thread.sleep(2*1000); % Java sleep is much more accurate than matlab's
 % write(joy_c, [22, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
 
 %% Set up data collection vectors
-ITERATIONS = 1500 % Main loop time period
+ITERATIONS = 1000 % Main loop time period
 WARMUP = 100; % Filter warmup time period
 
 % Data collection vectors
@@ -166,12 +166,20 @@ for i = 1:WARMUP
     
 end
 
-%% Run Main Loop
+%% Run Radio Check
+disp("Running radio check (5 seconds)")
+% for i=1:1000
+%     [data, timestamps] = read(joy_c_imu, 'latest');
+%     write(device,[startByte, 128, 0, 128, 128, endByte],"uint8") % comm_thr_d
+%     java.lang.Thread.sleep(5); % 10ms delay
+%     packetCount = data(15:16)
+% end
 
+%% Run Main Loop
 disp("Starting")
 java.lang.Thread.sleep(5*1000); % Wait 5 seconds
 
-T_trim = 120;
+T_trim = 150;
 
 k = 1;
 dT = 1/60; % 55Hz (writing only) - look into if dT might be faster 
@@ -326,12 +334,19 @@ while(k <= ITERATIONS)
     % Need a pitch offset
     
     %Send the command to the Drone
-    wTime = tic;
-%     write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
-    [data(k,:), timestamps(k)] = read(joy_c_imu, 'latest');
-    write(device,[startByte, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, endByte],"uint8") % comm_thr_d
-    wTimes(k) = toc(wTime);
-
+    if k<100
+        wTime = tic;
+    %     write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
+        [data(k,:), timestamps(k)] = read(joy_c_imu, 'latest');
+        write(device,[startByte, 128, 0, 128, 128, endByte],"uint8") % comm_thr_d
+        wTimes(k) = toc(wTime);
+    else
+        wTime = tic;
+    %     write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
+        [data(k,:), timestamps(k)] = read(joy_c_imu, 'latest');
+        write(device,[startByte, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, endByte],"uint8") % comm_thr_d
+        wTimes(k) = toc(wTime);
+    end
     
     
     
@@ -356,7 +371,7 @@ while(k <= ITERATIONS)
     errors(k) = Y_pid.y_curr_error;
     sent_data(k, :) = [comm_thr_d, comm_phi_d, comm_theta_d];
     cont_actual_data(k, :) = [pid_output_x, pid_output_y, pid_output_z];
-    java.lang.Thread.sleep(3); % 10ms delay
+    java.lang.Thread.sleep(5); % 10ms delay
     
     loopTimes(k) = toc(startT);
 %     dT = loopTimes(k);
@@ -455,7 +470,7 @@ while(z_f > 0.1)
     sent_data(k, :) = [comm_thr_d, comm_phi_d, comm_theta_d];
     cont_actual_data(k, :) = [pid_output_x, pid_output_y, pid_output_z];
 
-    java.lang.Thread.sleep(3); % 10ms delay
+    java.lang.Thread.sleep(5); % 10ms delay
 
     loopTimes(k) = toc(startT);
 %     dT = loopTimes(k);

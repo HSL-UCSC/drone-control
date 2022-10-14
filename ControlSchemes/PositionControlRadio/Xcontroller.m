@@ -3,9 +3,9 @@ function [x_acc_d, pid_output, X_pid_err] = Xcontroller(X_pid, x_d, x, x_dot, dt
         
     %% -------------------- FIRST PID BLOCK ------------------------------
     % Gains
-    K_p = 200; % Shouldnt do anything with 100 (maybe 1 degree commanded) % 250,0,1 best for just commanding x
+    K_p = 150; % Shouldnt do anything with 100 (maybe 1 degree commanded) % 250,0,1 best for just commanding x
     K_i = 1; % 350,5,200 was last gains 300,10,100
-    K_d = 50;
+    K_d = 150;
     
     % Proportional
     X_pid_err.x_curr_error = x_d - x;
