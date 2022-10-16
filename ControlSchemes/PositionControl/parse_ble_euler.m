@@ -1,4 +1,4 @@
-function [thx, thy, thz] = parse_ble_euler(data, scale)
+function [thx, thy, thz] = parse_ble_euler(data, scale) % Scale is for decimal precision (choose what was chosen at the firmware level)
     % Data - 1x6 matrix (thx,thy,thz=0)
     
     % Thx - pitch
