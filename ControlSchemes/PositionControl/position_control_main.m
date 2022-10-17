@@ -89,7 +89,7 @@ java.lang.Thread.sleep(2*1000); % Java sleep is much more accurate than matlab's
 % write(joy_c, [22, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
 
 %% Set up data collection vectors
-ITERATIONS = 1500 % Main loop time period
+ITERATIONS = 1000 % Main loop time period
 WARMUP = 100; % Filter warmup time period
 
 % Data collection vectors
@@ -272,7 +272,7 @@ while(k <= ITERATIONS)
     % Store the refs
     xRefs(k) = x_ref;
     % Call the X Controller - Desired Roll
-    [ddot_x_d, pid_output_x, X_pid] = PID_Controller.Xcontroller(X_pid, x_ref, x_f, vx_f, dT, 1/CUT_OFF_FREQ_VEL,k);
+    [ddot_x_d, pid_output_x, X_pid] = PID_Controller.Xcontroller(X_pid, x_ref, x_f, vx_f, dT);
     
 
 
@@ -297,7 +297,7 @@ while(k <= ITERATIONS)
     % Store the refs
     yRefs(k) = y_ref;
     % Call the Y Controller - Desired Pitch
-    [ddot_y_d, pid_output_y, Y_pid] = PID_Controller.Ycontroller(Y_pid, y_ref, y_f, vy_f, dT, 1/CUT_OFF_FREQ_VEL,k);
+    [ddot_y_d, pid_output_y, Y_pid] = PID_Controller.Ycontroller(Y_pid, y_ref, y_f, vy_f, dT);
     
     
 %     z_ref = z_f + 0.15;
@@ -312,7 +312,7 @@ while(k <= ITERATIONS)
     % Store the refs
     zRefs(k) = z_ref_final;
     % Call the Z Controller - Desired Thrust
-    [gTHR, pid_output_z, Z_pid] = PID_Controller.Zcontroller(Z_pid, z_ref_final, z_f, vz_f, dT, 1/CUT_OFF_FREQ_VEL,k);
+    [gTHR, pid_output_z, Z_pid] = PID_Controller.Zcontroller(Z_pid, z_ref_final, z_f, vz_f, dT);
     
     % Apply trim input thrust
     comm_thr_d = gTHR + T_trim;
@@ -427,13 +427,13 @@ while(z_f > 0.1)
     
     
     % Call the X Controller - Desired Roll
-    [ddot_x_d, pid_output_x, X_pid] = PID_Controller.Xcontroller(X_pid, x_ref, x_f, vx_f, dT, 1/CUT_OFF_FREQ_VEL,k);
+    [ddot_x_d, pid_output_x, X_pid] = PID_Controller.Xcontroller(X_pid, x_ref, x_f, vx_f, dT);
     
     % Call the Y Controller - Desired Pitch
-    [ddot_y_d, pid_output_y, Y_pid] = PID_Controller.Ycontroller(Y_pid, y_ref, y_f, vy_f, dT, 1/CUT_OFF_FREQ_VEL,k);
+    [ddot_y_d, pid_output_y, Y_pid] = PID_Controller.Ycontroller(Y_pid, y_ref, y_f, vy_f, dT);
     
     % Call the Z Controller - Desired Thrust
-    [gTHR, pid_output_z, Z_pid] = PID_Controller.Zcontroller(Z_pid, z_ref, z_f, vz_f, dT, 1/CUT_OFF_FREQ_VEL,k);
+    [gTHR, pid_output_z, Z_pid] = PID_Controller.Zcontroller(Z_pid, z_ref, z_f, vz_f, dT);
     
     % Apply trim input thrust
     comm_thr_d = gTHR + T_trim;

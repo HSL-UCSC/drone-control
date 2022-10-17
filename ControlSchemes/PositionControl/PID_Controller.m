@@ -133,7 +133,7 @@ classdef PID_Controller
         %     T = uint8(output_n);
             
         end
-        function X_pid = VXpid_error_init(reset_pid, OUT_FREQ, CUT_OFF_FREQ_POS)
+        function X_pid = Xpid_init(reset_pid, OUT_FREQ, CUT_OFF_FREQ_POS)
             persistent x_curr_error
             persistent vx_curr_error
             persistent x_cumm_error
@@ -157,7 +157,7 @@ classdef PID_Controller
             X_pid.deriv = deriv;
             X_pid.lpf_data = lpf_data;
         end
-        function Y_pid = VYpid_error_init(reset_pid, OUT_FREQ, CUT_OFF_FREQ_POS)  
+        function Y_pid = Ypid_init(reset_pid, OUT_FREQ, CUT_OFF_FREQ_POS)  
             persistent y_curr_error
             persistent vy_curr_error
             persistent y_cumm_error
@@ -181,7 +181,7 @@ classdef PID_Controller
             Y_pid.deriv = deriv;
             Y_pid.lpf_data = lpf_data;
         end
-        function Z_pid = VZpid_error_init(reset_pid, OUT_FREQ, CUT_OFF_FREQ_POS)
+        function Z_pid = Zpid_init(reset_pid, OUT_FREQ, CUT_OFF_FREQ_POS)
             persistent z_curr_error
             persistent z_cumm_error % This is unique to Z controller
             persistent vz_curr_error
