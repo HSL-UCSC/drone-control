@@ -5,7 +5,7 @@ classdef PID_Controller
                 
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
-            K_p = 150; % Shouldnt do anything with 100 (maybe 1 degree commanded) % 250,0,1 best for just commanding x
+            K_p = 125; % Shouldnt do anything with 100 (maybe 1 degree commanded) % 250,0,1 best for just commanding x
             K_i = 15; % 350,5,200 was last gains 300,10,100
             K_d = 50;
             
@@ -46,7 +46,7 @@ classdef PID_Controller
             
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
-            K_p = 150; % Shouldnt do anything with 100 (maybe 1 degree commanded)
+            K_p = 125; % Shouldnt do anything with 100 (maybe 1 degree commanded)
             K_i = 15;
             K_d = 50; %
             
@@ -140,7 +140,7 @@ classdef PID_Controller
             persistent x_prev
             persistent deriv
             
-            lpf_data = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, 0.0);
+            lpf_data = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, 0.0);
             
             if reset_pid == 1
                 x_curr_error = 0.0;
@@ -164,7 +164,7 @@ classdef PID_Controller
             persistent y_prev
             persistent deriv
             
-            lpf_data = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, 0.0);
+            lpf_data = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, 0.0);
             
             if reset_pid == 1
                 y_curr_error = 0.0;
@@ -189,7 +189,7 @@ classdef PID_Controller
             persistent vz_prev
             persistent deriv
             
-            lpf_data = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, 0.0);
+            lpf_data = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, 0.0);
             
             if reset_pid == 1
                 z_curr_error = 0.0;

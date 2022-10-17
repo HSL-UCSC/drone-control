@@ -89,8 +89,8 @@ java.lang.Thread.sleep(2*1000); % Java sleep is much more accurate than matlab's
 % write(joy_c, [22, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
 
 %% Set up data collection vectors
-ITERATIONS = 1000 % Main loop time period
-WARMUP = 100; % Filter warmup time period
+ITERATIONS = 900 % Main loop time period
+WARMUP = 250; % Filter warmup time period
 
 % Data collection vectors
 Drone_data = zeros(ITERATIONS + 2, 7);  % drone position data
@@ -131,7 +131,7 @@ Y_pid = PID_Controller.Ypid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
 Z_pid = PID_Controller.Zpid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
 
 %% Get the Drone data
-[DronePos] = GetDronePosition(theClient, Drone_ID);
+[DronePos] = MocapAPI.GetDronePosition(theClient, Drone_ID);
 Drone_data(1, :) = DronePos;
 
 %% SET POINT TO TRACK
@@ -142,14 +142,14 @@ comm_yaw_d = 128; % integer representation of 128 is 0 degrees. Min max is 30 de
 
 
 %% Initialize lowpass filter
-[DronePos] = GetDronePosition(theClient, Drone_ID);
-lpfData_x = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(2));
-lpfData_y = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(3));
-lpfData_z = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(4));
+[DronePos] = MocapAPI.GetDronePosition(theClient, Drone_ID);
+lpfData_x = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(2));
+lpfData_y = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(3));
+lpfData_z = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(4));
 
-lpfData_vx = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_VEL, 0);
-lpfData_vy = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_VEL, 0);
-lpfData_vz = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_VEL, 0);
+lpfData_vx = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_VEL, 0);
+lpfData_vy = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_VEL, 0);
+lpfData_vz = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_VEL, 0);
 
 prev_x =  DronePos(2);
 prev_y =  DronePos(3);
@@ -157,19 +157,19 @@ prev_z =  DronePos(4);
 
 %% Warm up Filter
 for i = 1:WARMUP
-    [DronePos] = GetDronePosition(theClient, Drone_ID);
+    [DronePos] = MocapAPI.GetDronePosition(theClient, Drone_ID);
     %Drone_data = [Drone_data; DronePos];
     
-    [x_f, lpfData_x] = lpf_2(lpfData_x, DronePos(2));
-    [vx_f, lpfData_vx] = lpf_2(lpfData_vx, x_f - prev_x);
+    [x_f, lpfData_x] = Filter.lpf_2(lpfData_x, DronePos(2));
+    [vx_f, lpfData_vx] = Filter.lpf_2(lpfData_vx, x_f - prev_x);
     prev_x = x_f;
     
-    [y_f, lpfData_y] = lpf_2(lpfData_y, DronePos(3));
-    [vy_f, lpfData_vy] = lpf_2(lpfData_vy, y_f - prev_y);
+    [y_f, lpfData_y] = Filter.lpf_2(lpfData_y, DronePos(3));
+    [vy_f, lpfData_vy] = Filter.lpf_2(lpfData_vy, y_f - prev_y);
     prev_y = y_f;
     
-    [z_f, lpfData_z] = lpf_2(lpfData_z, DronePos(4));
-    [vz_f, lpfData_vz] = lpf_2(lpfData_vz, z_f - prev_z);
+    [z_f, lpfData_z] = Filter.lpf_2(lpfData_z, DronePos(4));
+    [vz_f, lpfData_vz] = Filter.lpf_2(lpfData_vz, z_f - prev_z);
     prev_z = z_f;
     
 end
@@ -192,13 +192,14 @@ T_trim = 130;
 k = 1;
 dT = 1/60; % 55Hz (writing only) - look into if dT might be faster 
 
-[prevDronePos] = GetDronePosition(theClient, Drone_ID);
-data = zeros(ITERATIONS+1,20); % For reading IMU
+[prevDronePos] = MocapAPI.GetDronePosition(theClient, Drone_ID);
+data = zeros(1,20); % For reading IMU
 timestamps = datetime(zeros(10,1), 0, 0); %a 10x1 array of datetime
 Drone_pos_data = [];
 Drone_rate_data = [];
 packetCount = [];
-x_torques = [];
+torques = [];
+thrusts = [];
 
 z_ref_final = 0.7;
 xRefs = [];
@@ -209,18 +210,12 @@ zRefs = [];
 flag1 = 0;
 flag2 = 0;
 flag3 = 0;
-% subscribe(joy_c_imu,"notification")
-while(k <= ITERATIONS)
-%     if(k>1500)
-%         pause(0.1)
-%     end
-    %read(joy_c_imu);
 
-    startT = tic;   
-    
+startT = tic; 
+while(1)
     % Get new drone position and store
     startTPos = tic;
-    [DronePos] = GetDronePosition(theClient, Drone_ID);
+    [DronePos] = MocapAPI.GetDronePosition(theClient, Drone_ID);
     getPosTimes(k) = toc(startTPos);    
     Drone_data(k+1, :) = DronePos;
     
@@ -230,31 +225,35 @@ while(k <= ITERATIONS)
     
 
     % Apply low pass filter to position/velocity measurements
-    [x_f, lpfData_x] = lpf_2(lpfData_x, DronePos(2));
+    [x_f, lpfData_x] = Filter.lpf_2(lpfData_x, DronePos(2));
     p_x(k) = x_f;
-    [vx_f, lpfData_vx] = lpf_2(lpfData_vx, (x_f - prev_x)/dT);
+    [vx_f, lpfData_vx] = Filter.lpf_2(lpfData_vx, (x_f - prev_x)/dT);
     f_v_x(k) = vx_f;
     prev_x = x_f;
     
-    [y_f, lpfData_y] = lpf_2(lpfData_y, DronePos(3));
+    [y_f, lpfData_y] = Filter.lpf_2(lpfData_y, DronePos(3));
     p_y(k) = y_f;
-    [vy_f, lpfData_vy] = lpf_2(lpfData_vy, (y_f - prev_y)/dT);
+    [vy_f, lpfData_vy] = Filter.lpf_2(lpfData_vy, (y_f - prev_y)/dT);
     f_v_y(k) = vy_f;
     prev_y = y_f;
     
-    [z_f, lpfData_z] = lpf_2(lpfData_z, DronePos(4));
+    [z_f, lpfData_z] = Filter.lpf_2(lpfData_z, DronePos(4));
     p_z(k) = z_f;
-    [vz_f, lpfData_vz] = lpf_2(lpfData_vz, (z_f - prev_z)/dT);
+    [vz_f, lpfData_vz] = Filter.lpf_2(lpfData_vz, (z_f - prev_z)/dT);
     f_v_z(k) = vz_f;
     prev_z = z_f;
     
+    % Get dT loop time
+    loopTimes(k) = toc(startT);
+    dT = loopTimes(k);
+    startT = tic;
     
-    
-   
-    x_ref = 0;
+    % Reference decision while flying
     if(TRAJECTORY == 0)
         % Circular trajectory
         x_ref = 0.5*cos(0.01*k);
+        y_ref = 0.5*sin(0.01*k);
+        z_ref = z_ref_final;
     else
         % Position hover trajectory
         x_ref = x_f - sign(x_f)*0.25;
@@ -265,23 +264,7 @@ while(k <= ITERATIONS)
         if(flag1==1)
             x_ref = 0;
         end
-    end
-    
-    
 
-    % Store the refs
-    xRefs(k) = x_ref;
-    % Call the X Controller - Desired Roll
-    [ddot_x_d, pid_output_x, X_pid] = PID_Controller.Xcontroller(X_pid, x_ref, x_f, vx_f, dT);
-    
-
-
-    y_ref = 0;
-    if(TRAJECTORY == 0)
-        % Circular trajectory
-        y_ref = 0.5*sin(0.01*k);
-    else
-        % Position hover trajectory
         y_ref = y_f - sign(y_f)*0.25;
         if(y_f < 0.25 && y_f > -0.25)
             flag2 = 1;
@@ -290,41 +273,43 @@ while(k <= ITERATIONS)
         if(flag2==1)
             y_ref = 0;
         end
+
+        z_ref = z_ref_final;
     end
-    
-    
+
+    % Landing condition
+    if(k > ITERATIONS)
+        x_ref = 0;
+        y_ref = 0;
+        z_ref = z_f - 0.10;
+
+        if(z_f < 0.1)
+            disp("Landed")
+            break;
+        end
+    end
+
 
     % Store the refs
+    xRefs(k) = x_ref;
+    % Call the X Controller - Desired Roll
+    [ddot_x_d, pid_output_x, X_pid] = PID_Controller.Xcontroller(X_pid, x_ref, x_f, vx_f, dT);
+
     yRefs(k) = y_ref;
     % Call the Y Controller - Desired Pitch
     [ddot_y_d, pid_output_y, Y_pid] = PID_Controller.Ycontroller(Y_pid, y_ref, y_f, vy_f, dT);
-    
-    
-%     z_ref = z_f + 0.15;
-%     if(z_f > z_ref_final - 0.2)
-%         flag3 = 1;
-%         z_ref = z_ref_final;
-%     end
-%     if(flag3==1)
-%         z_ref = z_ref_final;
-%     end
-    
-    % Store the refs
-    zRefs(k) = z_ref_final;
+
+    zRefs(k) = z_ref;
     % Call the Z Controller - Desired Thrust
-    [gTHR, pid_output_z, Z_pid] = PID_Controller.Zcontroller(Z_pid, z_ref_final, z_f, vz_f, dT);
+    [gTHR, pid_output_z, Z_pid] = PID_Controller.Zcontroller(Z_pid, z_ref, z_f, vz_f, dT);
     
     % Apply trim input thrust
     comm_thr_d = gTHR + T_trim;
     
     % Calculate desired roll,pitch angles - From Harsh Report
     psi = DronePos(7); % yaw
-%     psi = 0;
     phi_d = -m/single(comm_thr_d) * (ddot_x_d*cos(psi) + ddot_y_d*sin(psi))* 180/pi; % MIGHT NEED TO REPLACE comm_thr_d with actual thrust sent to actuators on drone
     theta_d = m/single(comm_thr_d) * (-ddot_y_d*cos(psi) + ddot_x_d*sin(psi)) * 180/pi;
-    
-%     theta_d = 0.5; % Dont command y-pitch yet (0.5 offset)
-%     phi_d = 0.5; % Dont command x-roll yet
     
     % Cap angles
     phi_d = min(max(-MAX_ANGLE, phi_d), MAX_ANGLE);
@@ -334,36 +319,48 @@ while(k <= ITERATIONS)
     slope_m = 255.0/(MAX_ANGLE - -MAX_ANGLE);
     comm_phi_d = uint8(slope_m *(phi_d + MAX_ANGLE));
     comm_theta_d = uint8(slope_m *(theta_d + MAX_ANGLE));
-    % Need a pitch offset
     
-    %Send the command to the Drone
-%     if k<100
-%         wTime = tic;
-%     %     write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
-%         [data(k,:), timestamps(k)] = read(joy_c_imu, 'latest');
-%         write(device,[startByte, 128, 0, 128, 128, endByte],"uint8") % comm_thr_d
-%         wTimes(k) = toc(wTime);
-%     else
-        wTime = tic;
-    %     write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
-        [data(k,:), timestamps(k)] = read(joy_c_imu, 'latest');
-        write(device,[startByte, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, endByte],"uint8") % comm_thr_d
-        wTimes(k) = toc(wTime);
-%     end
+
+
+    % Send the command to the Drone %
+    wTime = tic;
+%     write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
+    [data(1,:), timestamps(1)] = read(joy_c_imu, 'latest');
+    write(device,[startByte, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, endByte],"uint8")
+    wTimes(k) = toc(wTime);
     
     
     
     
     
-     %%%
-     [thx,thy,thz] = parse_ble_euler(data(k,3:8),10);
-     euler(k,:) = [thx,thy,thz];
-     [thx_rate,thy_rate,thz_rate] = parse_ble_euler(data(k,9:14),100);
+     % Store on-board attitudes
+%      thx = parse_ble(data(1,3:4),10);
+%      thy = parse_ble(data(1,5:6),10);
+%      thz = parse_ble(data(1,7:8),10);
+%      euler(k,:) = [thx,thy,thz];
+
+     % Store on-board torques
+     torqueX = parse_ble(data(1, 3:4),1);
+     torqueY = parse_ble(data(1, 5:6),1);
+     torqueZ = parse_ble(data(1, 7:8),1);
+     torques(k,:) = [torqueX, torqueY, torqueZ];
+
+     % Store on-board attitude rates
+     thx_rate = parse_ble(data(1,9:10),100);
+     thy_rate = parse_ble(data(1,11:12),100);
+     thz_rate = parse_ble(data(1,13:14),100);
      euler_rates(k,:) = [thx_rate,thy_rate,thz_rate];
-     packetCount(k,:) = data(k,15:16);
-     torque = parse_ble(data(k, 19:20),1);
-     x_torques(k,:) = torque;
-    
+
+     % Store on-board packet count
+     packetCount(k,:) = data(1,15:16);
+
+     % Store on-board thrust
+     thrust = parse_ble(data(1, 19:20),1);
+     thrusts(k,:) = thrust;
+
+
+    % Tylers data
+    Tyler(k,:) = [x_f,y_f,z_f,vx_f,vy_f,vz_f,Drone_pos_data(k,1),Drone_pos_data(k,2),Drone_pos_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),torques(k,1),torques(k,2),torques(k,3),thrust];
     
     
     % Collect the data being sent
@@ -373,126 +370,16 @@ while(k <= ITERATIONS)
     desired_attitudes(k, :) = [theta_d, phi_d];
 
     s = tic;
-    java.lang.Thread.sleep(5); % 15ms delay
+    java.lang.Thread.sleep(5); % 5ms delay
+
     sleepTimes(k) = toc(s);
 
 
-    loopTimes(k) = toc(startT);
-%     dT = loopTimes(k);
-    
     k = k+1;
 end
-
-
-
-
-
-% Land at the origin
-x_ref = 0;
-y_ref = 0;
-
-disp("Landing")
-% Landing phase
-while(z_f > 0.1)
-    startT = tic;
-    
-
-    z_ref = z_f - 0.10;
-    zRefs(k) = z_ref;
-
-    % Get new drone position and store
-    startTPos = tic;
-    [DronePos] = GetDronePosition(theClient, Drone_ID);
-    getPosTimes(k) = toc(startTPos);    
-    Drone_data(k+1, :) = DronePos;
-
-    % Apply low pass filter to position/velocity measurements
-    [x_f, lpfData_x] = lpf_2(lpfData_x, DronePos(2));
-    p_x(k) = x_f;
-    [vx_f, lpfData_vx] = lpf_2(lpfData_vx, (x_f - prev_x)/dT);
-    f_v_x(k) = vx_f;
-    prev_x = x_f;
-    
-    [y_f, lpfData_y] = lpf_2(lpfData_y, DronePos(3));
-    p_y(k) = y_f;
-    [vy_f, lpfData_vy] = lpf_2(lpfData_vy, (y_f - prev_y)/dT);
-    f_v_y(k) = vy_f;
-    prev_y = y_f;
-    
-    [z_f, lpfData_z] = lpf_2(lpfData_z, DronePos(4));
-    p_z(k) = z_f;
-    [vz_f, lpfData_vz] = lpf_2(lpfData_vz, (z_f - prev_z)/dT);
-    f_v_z(k) = vz_f;
-    prev_z = z_f;
-    
-    
-    % Call the X Controller - Desired Roll
-    [ddot_x_d, pid_output_x, X_pid] = PID_Controller.Xcontroller(X_pid, x_ref, x_f, vx_f, dT);
-    
-    % Call the Y Controller - Desired Pitch
-    [ddot_y_d, pid_output_y, Y_pid] = PID_Controller.Ycontroller(Y_pid, y_ref, y_f, vy_f, dT);
-    
-    % Call the Z Controller - Desired Thrust
-    [gTHR, pid_output_z, Z_pid] = PID_Controller.Zcontroller(Z_pid, z_ref, z_f, vz_f, dT);
-    
-    % Apply trim input thrust
-    comm_thr_d = gTHR + T_trim;
-    
-    % Calculate desired roll,pitch angles - From Harsh Report
-    psi = DronePos(7); % yaw
-%     psi = 0;
-    phi_d = -m/single(comm_thr_d) * (ddot_x_d*cos(psi) + ddot_y_d*sin(psi))* 180/pi; % MIGHT NEED TO REPLACE comm_thr_d with actual thrust sent to actuators on drone
-    theta_d = m/single(comm_thr_d) * (-ddot_y_d*cos(psi) + ddot_x_d*sin(psi)) * 180/pi;
-%     theta_d = 0.5; % Dont command y-pitch yet - ADD IN OFFSET
-%     phi_d = 0.5; % Dont command x-roll yet
-    
-    % Cap angles
-    phi_d = min(max(-MAX_ANGLE, phi_d), MAX_ANGLE);
-    theta_d = min(max(-MAX_ANGLE, theta_d), MAX_ANGLE);
-    
-    % Convert the angles to 0 - 255
-    slope_m = 255.0/(MAX_ANGLE - -MAX_ANGLE);
-    comm_phi_d = uint8(slope_m *(phi_d + MAX_ANGLE));
-    comm_theta_d = uint8(slope_m *(theta_d + MAX_ANGLE));
-    
-    %Send the command to the Drone
-    wTime = tic;
-%      write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
-    [data(k,:), timestamps(k)] = read(joy_c_imu, 'latest');
-    write(device,[startByte, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, endByte],"uint8")%comm_thr_d
-    wTimes(k) = toc(wTime);
-    
-%     [thx,thy,thz] = parse_ble_euler(data(k,3:8),10);
-%      euler(k,:) = [thx,thy,thz];
-%      [thx_rate,thy_rate,thz_rate] = parse_ble_euler(data(k,9:14),100);
-%      euler_rates(k,:) = [thx_rate,thy_rate,thz_rate];
-     
-    %%%
-    packetCount(k,:) = data(k,15:16);
-    torque = parse_ble(data(k, 19:20),1);
-    x_torques(k,:) = torque;
-    % Collect the data being sent
-    errors(k) = Y_pid.y_curr_error;
-    sent_data(k, :) = [comm_thr_d, comm_phi_d, comm_theta_d];
-    cont_actual_data(k, :) = [pid_output_x, pid_output_y, pid_output_z];
-    desired_attitudes(k, :) = [theta_d, phi_d];
-
-    java.lang.Thread.sleep(5); % 10ms delay
-
-    loopTimes(k) = toc(startT);
-%     dT = loopTimes(k);
- 
-    k = k+1;
-    
-end
-
-
-
-
 
 % Shut off drone
 disp("Shutting Down")
-write(device,[startByte, 128, 0, 128, 128, endByte],"uint8")
 ik = 0;
 while ik < 10
     %QUIT
@@ -501,37 +388,20 @@ while ik < 10
     ik = ik+1;
 end
 
-% write(joy_c, [0, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
-% ik = 0;
-% while ik < 10
-%     %QUIT
-%     write(joy_c, [0, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
-%     java.lang.Thread.sleep(10);
-%     ik = ik+1;
-% end
 % Finally, Close the Motive Client
 theClient.Uninitialize();
 
 disp('Done')
 
-% Saving Workspace to file
-save(filename)
 
 
 %% Display Results
+% Saving Workspace to file
+save(filename)
+
 close all
 
-figure()
-plot(Drone_data(:,5)*180/pi)
-% hold on;
-% plot(desired_attitudes(:,1))
-title("Pitch");
-
-figure()
-plot(Drone_data(:,6)*180/pi)
-% hold on;
-% plot(desired_attitudes(:,2))
-title("Roll");
+% Attitude tracking
 
 figure()
 hold on;
@@ -539,7 +409,7 @@ plot(p_z)
 plot(z_ref_final*ones(size(p_z,1)));
 title("Height");
 legend("Z", "Z_ref")
-axis([0 ITERATIONS 0 2])
+axis([0 k 0 2])
 grid on;
 
 figure()
@@ -548,7 +418,7 @@ plot(p_x)
 plot(xRefs);
 title("X");
 legend("X", "X_ref")
-axis([0 ITERATIONS -2 2])
+axis([0 k -2 2])
 
 figure()
 hold on;
@@ -556,38 +426,14 @@ plot(p_y)
 plot(yRefs);
 title("Y");
 legend("Y", "Y_ref")
-axis([0 ITERATIONS -2 2])
+axis([0 k -2 2])
 
-figure()
-plot(p_x,p_y)
-axis([-2 2 -2 2])
 
-% PID Output X
-figure()
-plot(cont_actual_data(:,1:3))
-title("PID X Output");
-legend("p","i","d")
 
-% PID Output Y
-figure()
-plot(cont_actual_data(:,4:6))
-title("PID Y Output");
-legend("p","i","d")
-
-% PID Output Z
-figure()
-plot(cont_actual_data(:,7:9))
-title("PID Z Output");
-legend("p","i","d")
-% 
-% 
 figure()
 plot(sent_data)
 title("Commands Sent");
 legend("comm_thr", "comm_phi", "comm_theta")
-% 
-% figure()
-% plot(errors)
 
 figure()
 plot(loopTimes)
@@ -595,49 +441,12 @@ title("Loop time")
 
 figure()
 plot(packetCount)
-
-% Find timeshift (and corresponding time delay) through xcorr (time delay should be 10-15ms (ie. = read() time?))
-[c,lags] = xcorr(euler(:,1),Drone_pos_data(:,1)*(180/pi));
-timeShift = find(c==max(c)) - ITERATIONS; % This number corresponds to how many ms?
-timeShift = 0;
-RMSE_pitch_angle = sqrt(mean((euler(1+timeShift:end,1) - Drone_pos_data(1:end-timeShift,1)*(180/pi)).^2))  % Root Mean Squared Error
-% Plot with timeshift
-figure();
-plot(euler(1+timeShift:end,1));
-hold on;
-plot(Drone_pos_data(1:end-timeShift,1)*(180/pi))
-legend("drone thx-pitch","motive thx-pitch");
+title("Packet count")
 
 
-% Find timeshift
-[c,lags] = xcorr(euler(:,2),Drone_pos_data(:,2)*(180/pi));
-timeShift = find(c==max(c)) - ITERATIONS; % This number corresponds to how many ms?
-timeShift = 0;
-RMSE_roll_angle = sqrt(mean((euler(1+timeShift:end,2) - Drone_pos_data(1:end-timeShift,2)*(180/pi)).^2))  % Root Mean Squared Error
-% Plot with timeshift
-figure();   
-plot(euler(1+timeShift:end,2));
-hold on;
-plot(Drone_pos_data(1:end-timeShift,2)*180/pi)
-legend("drone thy-roll","motive thy-roll");
-
-
-pitchRatesFil_motive = lowpass(euler_rates(:,1)*180/pi,0.1);
-pitchRatesFil_drone = lowpass(Drone_rate_data(:,1)*180/pi,0.1);
-figure();
-plot(pitchRatesFil_motive);
-hold on;
-plot(pitchRatesFil_drone)
-legend("drone thx-pitch rate","motive thx-pitch rate");
-
-rollRatesFil_motive = lowpass(euler_rates(:,2)*180/pi,0.1);
-rollRatesFil_drone = lowpass(Drone_rate_data(:,2)*180/pi,0.1);
-figure();
-plot(rollRatesFil_motive);
-hold on;
-plot(rollRatesFil_drone)
-legend("drone thy-roll rate","motive thy-roll rate");
-
+%% Tyler
+figure()
+plot(Tyler(:,16))
 
 
 
