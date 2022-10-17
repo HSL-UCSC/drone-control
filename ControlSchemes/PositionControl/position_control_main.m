@@ -126,9 +126,9 @@ m = 69.89/1000;
 MAX_ANGLE = 27.73;
 
 %% Inititalize the PID controllers
-X_pid = Xpid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
-Y_pid = Ypid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
-Z_pid = Zpid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
+X_pid = PID_Controller.Xpid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
+Y_pid = PID_Controller.Ypid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
+Z_pid = PID_Controller.Zpid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
 
 %% Get the Drone data
 [DronePos] = GetDronePosition(theClient, Drone_ID);
@@ -272,7 +272,7 @@ while(k <= ITERATIONS)
     % Store the refs
     xRefs(k) = x_ref;
     % Call the X Controller - Desired Roll
-    [ddot_x_d, pid_output_x, X_pid] = Xcontroller(X_pid, x_ref, x_f, vx_f, dT, 1/CUT_OFF_FREQ_VEL,k);
+    [ddot_x_d, pid_output_x, X_pid] = PID_Controller.Xcontroller(X_pid, x_ref, x_f, vx_f, dT, 1/CUT_OFF_FREQ_VEL,k);
     
 
 
@@ -297,7 +297,7 @@ while(k <= ITERATIONS)
     % Store the refs
     yRefs(k) = y_ref;
     % Call the Y Controller - Desired Pitch
-    [ddot_y_d, pid_output_y, Y_pid] = Ycontroller(Y_pid, y_ref, y_f, vy_f, dT, 1/CUT_OFF_FREQ_VEL,k);
+    [ddot_y_d, pid_output_y, Y_pid] = PID_Controller.Ycontroller(Y_pid, y_ref, y_f, vy_f, dT, 1/CUT_OFF_FREQ_VEL,k);
     
     
 %     z_ref = z_f + 0.15;
@@ -312,7 +312,7 @@ while(k <= ITERATIONS)
     % Store the refs
     zRefs(k) = z_ref_final;
     % Call the Z Controller - Desired Thrust
-    [gTHR, pid_output_z, Z_pid] = Zcontroller(Z_pid, z_ref_final, z_f, vz_f, dT, 1/CUT_OFF_FREQ_VEL,k);
+    [gTHR, pid_output_z, Z_pid] = PID_Controller.Zcontroller(Z_pid, z_ref_final, z_f, vz_f, dT, 1/CUT_OFF_FREQ_VEL,k);
     
     % Apply trim input thrust
     comm_thr_d = gTHR + T_trim;
@@ -427,13 +427,13 @@ while(z_f > 0.1)
     
     
     % Call the X Controller - Desired Roll
-    [ddot_x_d, pid_output_x, X_pid] = Xcontroller(X_pid, x_ref, x_f, vx_f, dT, 1/CUT_OFF_FREQ_VEL,k);
+    [ddot_x_d, pid_output_x, X_pid] = PID_Controller.Xcontroller(X_pid, x_ref, x_f, vx_f, dT, 1/CUT_OFF_FREQ_VEL,k);
     
     % Call the Y Controller - Desired Pitch
-    [ddot_y_d, pid_output_y, Y_pid] = Ycontroller(Y_pid, y_ref, y_f, vy_f, dT, 1/CUT_OFF_FREQ_VEL,k);
+    [ddot_y_d, pid_output_y, Y_pid] = PID_Controller.Ycontroller(Y_pid, y_ref, y_f, vy_f, dT, 1/CUT_OFF_FREQ_VEL,k);
     
     % Call the Z Controller - Desired Thrust
-    [gTHR, pid_output_z, Z_pid] = Zcontroller(Z_pid, z_ref, z_f, vz_f, dT, 1/CUT_OFF_FREQ_VEL,k);
+    [gTHR, pid_output_z, Z_pid] = PID_Controller.Zcontroller(Z_pid, z_ref, z_f, vz_f, dT, 1/CUT_OFF_FREQ_VEL,k);
     
     % Apply trim input thrust
     comm_thr_d = gTHR + T_trim;
