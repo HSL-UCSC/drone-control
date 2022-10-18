@@ -123,7 +123,7 @@ CUT_OFF_FREQ_POS = 10;
 
 %% Mass of the drone
 m = 69.89/1000;
-MAX_ANGLE = 27.73;
+MAX_ANGLE = 30.0;% 27.73;
 
 %% Inititalize the PID controllers
 X_pid = PID_Controller.Xpid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
@@ -340,16 +340,16 @@ while(1)
 %      euler(k,:) = [thx,thy,thz];
 
      % Store on-board torques
-     torqueX = parse_ble(data(1, 3:4),1);
-     torqueY = parse_ble(data(1, 5:6),1);
-     torqueZ = parse_ble(data(1, 7:8),1);
-     torques(k,:) = [torqueX, torqueY, torqueZ];
+     torqueX = parse_ble(data(1, 3:4),10);%1
+     torqueY = parse_ble(data(1, 5:6),10);
+     torqueZ = parse_ble(data(1, 7:8),10);
+     torques(k,:) = [torqueX, torqueY, torqueZ]; % AHRS
 
      % Store on-board attitude rates
-     thx_rate = parse_ble(data(1,9:10),100);
-     thy_rate = parse_ble(data(1,11:12),100);
-     thz_rate = parse_ble(data(1,13:14),100);
-     euler_rates(k,:) = [thx_rate,thy_rate,thz_rate];
+     thx_rate = parse_ble(data(1,9:10),10);%100
+     thy_rate = parse_ble(data(1,11:12),10);
+     thz_rate = parse_ble(data(1,13:14),10);
+     euler_rates(k,:) = [thx_rate,thy_rate,thz_rate]; % Commanded
 
      % Store on-board packet count
      packetCount(k,:) = data(1,15:16);
@@ -392,16 +392,16 @@ end
 theClient.Uninitialize();
 
 disp('Done')
-
+save(filename)
 
 
 %% Display Results
 % Saving Workspace to file
-save(filename)
+
 
 close all
 
-% Attitude tracking
+% % Attitude tracking
 
 figure()
 hold on;
@@ -428,12 +428,30 @@ title("Y");
 legend("Y", "Y_ref")
 axis([0 k -2 2])
 
+% 
+% 
+% figure()
+% plot(sent_data)
+% title("Commands Sent");
+% legend("comm_thr", "comm_phi", "comm_theta")
+% 
 
 
-figure()
-plot(sent_data)
-title("Commands Sent");
-legend("comm_thr", "comm_phi", "comm_theta")
+%% Tyler
+% figure()
+% plot(Tyler(:,1))
+% 
+% figure()
+% plot(Tyler(:,2))
+% 
+% figure()
+% plot(Tyler(:,3))
+% 
+% figure()
+% plot(Tyler(:,16))
+
+%% Tracking
+close all
 
 figure()
 plot(loopTimes)
@@ -443,10 +461,28 @@ figure()
 plot(packetCount)
 title("Packet count")
 
-
-%% Tyler
 figure()
-plot(Tyler(:,16))
+hold on;
+plot(-desired_attitudes(:,1));
+plot(euler_rates(:,1))
+plot(Drone_pos_data(:,1)*180/pi)
+plot(torques(:,1))
+title("Roll tracking")
+legend("Sent Desired", "Actual Commanded", "MOCAP","AHRS")
 
+figure()
+hold on;
+plot(desired_attitudes(:,2));
+plot(euler_rates(:,2))
+plot(Drone_pos_data(:,2)*180/pi)
+plot(torques(:,2))
+title("Pitch tracking")
 
+legend("Sent Desired", "Actual Commanded", "MOCAP","AHRS")
 
+% figure()
+% hold on;
+% plot(euler_rates(:,3))
+% plot(torques(:,3))
+% title("Yaw tracking")
+% legend("Sent Desired", "Actual Commanded", "AHRS")
