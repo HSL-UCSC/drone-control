@@ -89,7 +89,7 @@ java.lang.Thread.sleep(2*1000); % Java sleep is much more accurate than matlab's
 % write(joy_c, [22, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
 
 %% Set up data collection vectors
-ITERATIONS = 900 % Main loop time period
+ITERATIONS = 200 % Main loop time period
 WARMUP = 250; % Filter warmup time period
 
 % Data collection vectors
