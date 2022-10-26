@@ -1,9 +1,4 @@
-function position_control_main = position_control_main(in1, in2)
-    %% Clear past data
-    close all;  
-    clear all;
-    clc;
-    
+function position_control_main = position_control_main(in1, in2) 
     %% Documentation variables
     ExperimentNum = 0;
     DroneNum = 0;
@@ -99,11 +94,16 @@ function position_control_main = position_control_main(in1, in2)
     % joy_c_imu = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00E00000-0001-11E1-AC36-0002A5D5C51B") % Read IMU
     joy_c_imu = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00E00000-0001-11E1-AC36-0002A5D5C51B") % Read IMU
     
+    %% Load XBox Controller
+    xboxControllerHandle = XboxController();
+    xboxControllerHandle.init()
+
     %% Next calibrate/arm the drone
     % Reference slides 25,26 from - https://www.st.com/content/ccc/resource/sales_and_marketing/presentation/product_presentation/group0/bd/cc/11/15/14/d4/4a/85/STEVAL-DRONE01_GETTING_STARTED_GUIDE/files/steval-drone01_getting_started_guide.pdf/jcr:content/translations/en.steval-drone01_getting_started_guide.pdf
     
     % 1) Place drone down flat and press reset button to calibrate it
-    % 2) Arm the drone: 
+    % 2) Arm the drone:
+
     write(joy_c, [22, 128, 0, 128, 128, 0, 4], 'uint8', "WithoutResponse");
     java.lang.Thread.sleep(2*1000); % Java sleep is much more accurate than matlab's pause (sleep in ms)
     % write(joy_c, [22, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
@@ -111,7 +111,7 @@ function position_control_main = position_control_main(in1, in2)
     %% Set up data collection vectors
     disp("HERE")
 
-    ITERATIONS = 400 % Main loop time period
+    ITERATIONS = 1500 % Main loop time period
     WARMUP = 250; % Filter warmup time period
     
     % Data collection vectors
@@ -233,6 +233,7 @@ function position_control_main = position_control_main(in1, in2)
     flag1 = 0;
     flag2 = 0;
     flag3 = 0;
+    flagOverride = 0;
     
     startT = tic; 
     while(1)
@@ -344,12 +345,21 @@ function position_control_main = position_control_main(in1, in2)
         comm_theta_d = uint8(slope_m *(theta_d + MAX_ANGLE));
         
     
-    
+        % Get latest xbox controller input
+        [thrust,yaw,pitch,roll] = xboxControllerHandle.getState();
+        if(thrust > 25)
+            flagOverride = 1;
+        end
+        
         % Send the command to the Drone %
+        disp(flagOverride)
         wTime = tic;
-    %     write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
-        [data(1,:), timestamps(1)] = read(joy_c_imu, 'latest');
-        write(device,[startByte, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, endByte],"uint8")
+        if(flagOverride)
+            write(joy_c, [0, yaw, thrust, roll, pitch, 0, 5], 'uint8', "WithoutResponse") % ~18ms
+        else
+            [data(1,:), timestamps(1)] = read(joy_c_imu, 'latest');
+            write(device,[startByte, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, endByte],"uint8")
+        end
         wTimes(k) = toc(wTime);
         
         

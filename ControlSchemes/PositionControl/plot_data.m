@@ -12,30 +12,6 @@ plot(Drone_data(:,6)*180/pi)
 % plot(desired_attitudes(:,2))
 title("Roll");
 
-figure()
-hold on;
-plot(p_z)
-plot(z_ref_final*ones(size(p_z,1)));
-title("Height");
-legend("Z", "Z_ref")
-axis([0 k 0 2])
-grid on;
-
-figure()
-hold on;
-plot(p_x)
-plot(xRefs);
-title("X");
-legend("X", "X_ref")
-axis([0 k -2 2])
-
-figure()
-hold on;
-plot(p_y)
-plot(yRefs);
-title("Y");
-legend("Y", "Y_ref")
-axis([0 k -2 2])
 
 figure()
 plot(p_x,p_y)
