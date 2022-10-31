@@ -173,7 +173,7 @@ hold on;
 % plot(-desired_attitudes(:,1));
 % plot(euler_rates(:,1))
 plot(Drone_pos_data(:,1)*180/pi)
-plot(torques(:,1))
+plot(ahrsRec(:,1))
 title("Roll tracking")
 legend("Sent Desired", "Actual Commanded", "MOCAP","AHRS")
 
@@ -182,7 +182,7 @@ hold on;
 % plot(desired_attitudes(:,2));
 % plot(euler_rates(:,2))
 plot(Drone_pos_data(:,2)*180/pi)
-plot(torques(:,2))
+plot(ahrsRec(:,2))
 title("Pitch tracking")
 
 legend("Sent Desired", "Actual Commanded", "MOCAP","AHRS")

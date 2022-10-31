@@ -4,21 +4,14 @@ function position_control_main = position_control_main(in1, in2)
     DroneNum = 0;
     ExperimentType = "P";
     
-    load("AFOSR_Results\1-C_Metadata.mat",'ExperimentNum','DroneNum','ExperimentType');
-    
+    load("AFOSR_Results\1-C_Metadata.mat",'ExperimentNum','DroneNum','ExperimentType');   
     ExperimentNum = ExperimentNum + 1;
-    
     expStr = int2str(ExperimentNum);
     droneStr = int2str(DroneNum);
-    
     filename = sprintf("AFOSR_Results/%s-%s_Metadata", droneStr, ExperimentType);
-    
     save(filename, 'ExperimentNum', 'DroneNum', 'ExperimentType');
-    
     timeNow = "mm-dd-yy_HH-MM";
-    
     filenameDate = datestr(now, timeNow);
-    
     filename = sprintf("AFOSR_Results/%s-%s-%s_%s",droneStr,ExperimentType,expStr, filenameDate);
     
     
@@ -35,8 +28,7 @@ function position_control_main = position_control_main(in1, in2)
     %% Setting up data transfer memory share
     memshare_filename = fullfile(tempdir, 'position_control_memshare.dat');
     
-    % Create the communications file if it is not already there.
-%     if ~exist(memshare_filename, 'file')
+    % Open the memshare file
     [f, msg] = fopen(memshare_filename, 'w');
     if f ~= -1
         fwrite(f, zeros(1,256), 'double');
@@ -52,65 +44,20 @@ function position_control_main = position_control_main(in1, in2)
     
     
     %% Instantiate client object to run Motive API commands
-    % https://optitrack.com/software/natnet-sdk/
-    
-    % Create Motive client object
     dllPath = fullfile('d:','StDroneControl','NatNetSDK','lib','x64','NatNetML.dll');
-    assemblyInfo = NET.addAssembly(dllPath); % Add API function calls
-    theClient = NatNetML.NatNetClientML(0);
+    mocapHandle = MocapAPI();
+    mocapHandle.init(dllPath)
     
-    % Create connection to localhost, data is now being streamed through client object
-    HostIP = '127.0.0.1';
-    theClient.Initialize(HostIP, HostIP); 
-    
-    %% Connect to the Drone via Radio
-    %Make sure to get the the Drone's MAC address before running this code -
-    b = ble("C02835321733"); % ST DRONE FRAME 1
-    % b = ble("C0286E325133"); % FOAM CORE FRAME 1
-    
-    char = b.Characteristics; % Get the characteristics of the Drone
-    
-    device = serialport("COM5",19200)
-    flush(device)
-    startByte = 245; 
-    endByte = 2;
-    
-    %% Assign the rigid body id. Double check with motive that the rigid body ID is correct.killswitch
-    
-    Drone_ID = 1;
-    %Drone_ID = 2;
-    
-    %% Store the reference to the Charactersitic responsible for Writing Joystick data:
-    % https://www.st.com/resource/en/user_manual/dm00550659-getting-started-with-the-bluest-protocol-and-sdk-stmicroelectronics.pdf
-            % To send Joydata you need to send an array of 7 elements:
-            % First element:- No idea what this does.
-            % Second element:- rudder value (gRUD) 128 is like sending 0 (YAW)
-            % Third element:- thrust value (gTHR) (THRUST)
-            % Fourth element:- AIL value (gAIL) 128 is like sending 0  (ROLL)
-            % Fifth element:- ELE value (gELE) 128 is like sending 0  (PITCH)
-            % Sixth element:- SEEKBAR value: mainly from android app just send 0.
-            % Seventh element:- ARMING and CALIB: 0x04, 0x05, 0x01(For calib)
-    joy_c = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00008000-0001-11E1-AC36-0002A5D5C51B"); % Write w/out response
-    % joy_c_imu = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00E00000-0001-11E1-AC36-0002A5D5C51B") % Read IMU
-    joy_c_imu = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00E00000-0001-11E1-AC36-0002A5D5C51B") % Read IMU
-    
+    %% Connect to the Drone via Radio & BLE
+    commsHandle = Communication();
+    commsHandle.init("C02835321733","COM5",19200)
+
     %% Load XBox Controller
     xboxControllerHandle = XboxController();
     xboxControllerHandle.init()
 
-    %% Next calibrate/arm the drone
-    % Reference slides 25,26 from - https://www.st.com/content/ccc/resource/sales_and_marketing/presentation/product_presentation/group0/bd/cc/11/15/14/d4/4a/85/STEVAL-DRONE01_GETTING_STARTED_GUIDE/files/steval-drone01_getting_started_guide.pdf/jcr:content/translations/en.steval-drone01_getting_started_guide.pdf
-    
-    % 1) Place drone down flat and press reset button to calibrate it
-    % 2) Arm the drone:
 
-    write(joy_c, [22, 128, 0, 128, 128, 0, 4], 'uint8', "WithoutResponse");
-    java.lang.Thread.sleep(2*1000); % Java sleep is much more accurate than matlab's pause (sleep in ms)
-    % write(joy_c, [22, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
-    
     %% Set up data collection vectors
-    disp("HERE")
-
     ITERATIONS = 1500 % Main loop time period
     WARMUP = 250; % Filter warmup time period
     
@@ -154,7 +101,7 @@ function position_control_main = position_control_main(in1, in2)
     Z_pid = PID_Controller.Zpid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
     
     %% Get the Drone data
-    [DronePos] = MocapAPI.GetDronePosition(theClient, Drone_ID);
+    [DronePos] = mocapHandle.GetDronePosition();
     Drone_data(1, :) = DronePos;
     
     %% SET POINT TO TRACK
@@ -165,7 +112,7 @@ function position_control_main = position_control_main(in1, in2)
     
     
     %% Initialize lowpass filter
-    [DronePos] = MocapAPI.GetDronePosition(theClient, Drone_ID);
+    [DronePos] = mocapHandle.GetDronePosition();
     lpfData_x = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(2));
     lpfData_y = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(3));
     lpfData_z = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(4));
@@ -180,7 +127,7 @@ function position_control_main = position_control_main(in1, in2)
     
     %% Warm up Filter
     for i = 1:WARMUP
-        [DronePos] = MocapAPI.GetDronePosition(theClient, Drone_ID);
+        [DronePos] = mocapHandle.GetDronePosition();
         %Drone_data = [Drone_data; DronePos];
         
         [x_f, lpfData_x] = Filter.lpf_2(lpfData_x, DronePos(2));
@@ -197,31 +144,33 @@ function position_control_main = position_control_main(in1, in2)
         
     end
     
-    %% Run Radio Check
-    disp("Running radio check (5 seconds)")
-    % for i=1:1000
-    %     [data, timestamps] = read(joy_c_imu, 'latest');
-    %     write(device,[startByte, 128, 0, 128, 128, endByte],"uint8") % comm_thr_d
-    %     java.lang.Thread.sleep(5); % 10ms delay
-    %     packetCount = data(15:16)
-    % end
+    %% Wait for drone to be armed
+    disp("Waiting for drone to be armed")
+    data = zeros(1,3); % For reading IMU
+    timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
     
-    %% Run Main Loop
-    disp("Starting")
-    java.lang.Thread.sleep(5*1000); % Wait 5 seconds
+    toggleArm = 1;
+    while(1)
+        [data(1,:), timestamps(1)] = commsHandle.readArmBLE();
+        % Break if data says it is armed
+    end
+
+    %% Run Position Control Loop
+    disp("Starting in 1 second")
+    java.lang.Thread.sleep(1*1000);
     
     T_trim = 130;
     
     k = 1;
     dT = 1/60; % 55Hz (writing only) - look into if dT might be faster 
     
-    [prevDronePos] = MocapAPI.GetDronePosition(theClient, Drone_ID);
+    [prevDronePos] = mocapHandle.GetDronePosition();
     data = zeros(1,20); % For reading IMU
     timestamps = datetime(zeros(10,1), 0, 0); %a 10x1 array of datetime
     Drone_pos_data = [];
     Drone_rate_data = [];
     packetCount = [];
-    torques = [];
+    ahrsRec = [];
     thrusts = [];
     
     z_ref_final = 0.7;
@@ -233,13 +182,13 @@ function position_control_main = position_control_main(in1, in2)
     flag1 = 0;
     flag2 = 0;
     flag3 = 0;
-    flagOverride = 0;
+    controlMode = 0;
     
     startT = tic; 
     while(1)
         % Get new drone position and store
         startTPos = tic;
-        [DronePos] = MocapAPI.GetDronePosition(theClient, Drone_ID);
+        [DronePos] = mocapHandle.GetDronePosition();
         getPosTimes(k) = toc(startTPos);    
         Drone_data(k+1, :) = DronePos;
         
@@ -344,51 +293,71 @@ function position_control_main = position_control_main(in1, in2)
         comm_phi_d = uint8(slope_m *(phi_d + MAX_ANGLE));
         comm_theta_d = uint8(slope_m *(theta_d + MAX_ANGLE));
         
-    
         % Get latest xbox controller input
-        [thrust,yaw,pitch,roll] = xboxControllerHandle.getState();
-        if(thrust > 25)
-            flagOverride = 1;
-        end
+        [xbox_comm_thrust,xbox_comm_yaw,xbox_comm_pitch,xbox_comm_roll,calibrate,arm,override,land, ...
+            setpointMode,setpointPrev,setpointNext] = xboxControllerHandle.getState();
         
-        % Send the command to the Drone %
-        disp(flagOverride)
+        % Send updates/commands to the Drone
         wTime = tic;
-        if(flagOverride)
-            write(joy_c, [0, yaw, thrust, roll, pitch, 0, 5], 'uint8', "WithoutResponse") % ~18ms
+        
+        % Send data update
+        if(override)
+            controlMode = xor(controlMode,1); % Toggle AOMC (0) and MOMC (1)
+            updatePacket = commsHandle.dataUpdatePacket(commsHandle.DR_UPDATE_CM, controlMode);
+            write(device,updatePacket,"uint8") 
+        end
+        if(arm)
+            toggleArm = xor(toggleArm,1);
+            updatePacket = commsHandle.dataUpdatePacket(commsHandle.DR_UPDATE_ARM, toggleArm);
+            write(device,updatePacket,"uint8")
+        end
+        if(calibrate)
+            updatePacket = commsHandle.dataUpdatePacket(commsHandle.DR_UPDATE_CAL, 1);
+            write(device,updatePacket,"uint8")
+        end
+
+        % Send attitude command
+        if(controlMode == 1)
+            cmdPacket = commsHandle.attitudeCmdPacket(xbox_comm_yaw,xbox_comm_thrust,xbox_comm_roll,xbox_comm_pitch);
+            write(device,cmdPacket,"uint8")
         else
-            [data(1,:), timestamps(1)] = read(joy_c_imu, 'latest');
-            write(device,[startByte, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, endByte],"uint8")
+            cmdPacket = commsHandle.attitudeCmdPacket(comm_yaw_d,comm_thr_d,comm_phi_d,comm_theta_d);
+            write(device,cmdPacket,"uint8")
         end
         wTimes(k) = toc(wTime);
         
+
+
         
-        
+        % Read latest BLE
+        rTime = tic;
+        [data(1,:), timestamps(1)] = commsHandle.readImuBLE();
+        rTimes(k) = toc(rTime);
         
         
          % Store on-board attitudes
-    %      thx = parse_ble(data(1,3:4),10);
-    %      thy = parse_ble(data(1,5:6),10);
-    %      thz = parse_ble(data(1,7:8),10);
+    %      thx = commsHandle.parseBLE(data(1,3:4),10);
+    %      thy = commsHandle.parseBLE(data(1,5:6),10);
+    %      thz = commsHandle.parseBLE(data(1,7:8),10);
     %      euler(k,:) = [thx,thy,thz];
     
          % Store on-board torques
-         torqueX = parse_ble(data(1, 3:4),10);%1
-         torqueY = parse_ble(data(1, 5:6),10);
-         torqueZ = parse_ble(data(1, 7:8),10);
-         torques(k,:) = [torqueX, torqueY, torqueZ]; % AHRS
+         ahrsX = commsHandle.parseBLE(data(1, 3:4),10);%1
+         ahrsY = commsHandle.parseBLE(data(1, 5:6),10);
+         ahrsZ = commsHandle.parseBLE(data(1, 7:8),10);
+         ahrsRec(k,:) = [ahrsX, ahrsY, ahrsZ]; % AHRS
     
          % Store on-board attitude rates
-         thx_rate = parse_ble(data(1,9:10),10);%100
-         thy_rate = parse_ble(data(1,11:12),10);
-         thz_rate = parse_ble(data(1,13:14),10);
+         thx_rate = commsHandle.parseBLE(data(1,9:10),10);%100
+         thy_rate = commsHandle.parseBLE(data(1,11:12),10);
+         thz_rate = commsHandle.parseBLE(data(1,13:14),10);
          euler_rates(k,:) = [thx_rate,thy_rate,thz_rate]; % Commanded
     
          % Store on-board packet count
          packetCount(k,:) = data(1,15:16);
     
          % Store on-board thrust
-         thrust = parse_ble(data(1, 19:20),1);
+         thrust = commsHandle.parseBLE(data(1, 19:20),1);
          thrusts(k,:) = thrust;
     
     
@@ -404,7 +373,7 @@ function position_control_main = position_control_main(in1, in2)
         
         % Memshare data
         memShareT = tic;
-        memMap.Data(1) = torques(k,1); % AHRS
+        memMap.Data(1) = ahrsRec(k,1); % AHRS
         memMap.Data(2) = Drone_pos_data(k,1)*180/pi;  
         memShareTimes(k) = toc(memShareT);
     

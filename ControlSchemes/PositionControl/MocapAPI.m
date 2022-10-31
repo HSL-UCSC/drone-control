@@ -1,19 +1,38 @@
-classdef MocapAPI 
-    methods     ( Static = true )
-        function [result] = GetDronePosition(client,id)
+classdef MocapAPI < handle
+    properties
+        % Init
+        client;
+        drone_id;
+    end 
+    methods
+        function init = init(obj,dllPath)
+            % https://optitrack.com/software/natnet-sdk/
+    
+            % Create Motive client object
+            assemblyInfo = NET.addAssembly(dllPath); % Add API function calls
+            obj.client = NatNetML.NatNetClientML(0);
+            
+            % Create connection to localhost, data is now being streamed through client object
+            HostIP = '127.0.0.1';
+            obj.client.Initialize(HostIP, HostIP); 
+        
+            % Assign drone ID
+            obj.drone_id = 1;
+        end
+        function [result] = GetDronePosition(obj)
             % This function will get the data from Motive and extract the x, y, z
             % coordinates from the incoming data.
             
             R_x = [1 0 0; 0 cosd(-90) -sind(-90); 0 sind(-90) cosd(-90)];
             
             R_z = [cosd(90) -sind(90) 0; sind(90) cosd(90) 0; 0 0 1];
-            frameData = client.GetLastFrameOfData();
+            frameData = obj.client.GetLastFrameOfData();
             
             %Get the time stamp
             time_stamp = frameData.fTimestamp;
             
             %Get the marker data
-            drone_pos = frameData.RigidBodies(id)
+            drone_pos = frameData.RigidBodies(obj.drone_id)
             
             %ball_pos = frameData.OtherMarkers(id);
             if length(drone_pos) > 0
