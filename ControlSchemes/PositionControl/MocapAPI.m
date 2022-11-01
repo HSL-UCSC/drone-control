@@ -5,6 +5,9 @@ classdef MocapAPI < handle
         drone_id;
     end 
     methods
+        function shutdown = shutdown(obj)
+            obj.client.Uninitialize();
+        end
         function init = init(obj,dllPath)
             % https://optitrack.com/software/natnet-sdk/
     
@@ -32,7 +35,7 @@ classdef MocapAPI < handle
             time_stamp = frameData.fTimestamp;
             
             %Get the marker data
-            drone_pos = frameData.RigidBodies(obj.drone_id)
+            drone_pos = frameData.RigidBodies(obj.drone_id);
             
             %ball_pos = frameData.OtherMarkers(id);
             if length(drone_pos) > 0
@@ -62,7 +65,7 @@ classdef MocapAPI < handle
                 y_d = -drone_pos.z; 
                 z_d = drone_pos.y;
                 q = [drone_pos.qx, drone_pos.qy, drone_pos.qz, drone_pos.qw];
-                Eul_ang = quat2eul(q)
+                Eul_ang = quat2eul(q);
                 yaw = -Eul_ang(2);
                 if Eul_ang(1) <= 0
                     pitch = pi + Eul_ang(1);
