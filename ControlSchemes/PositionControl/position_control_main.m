@@ -382,7 +382,7 @@ while(1)
 %      thy = commsHandle.parseBLE(data(1,5:6),10);
 %      thz = commsHandle.parseBLE(data(1,7:8),10);
 %      euler(k,:) = [thx,thy,thz];
-
+ 
      % Store on-board torques
      ahrsX = commsHandle.parseBLE(data(1, 3:4),10);%1
      ahrsY = commsHandle.parseBLE(data(1, 5:6),10);
@@ -390,10 +390,11 @@ while(1)
      ahrsRec(k,:) = [ahrsX, ahrsY, ahrsZ]; % AHRS
 
      % Store on-board attitude rates
-     thx_rate = commsHandle.parseBLE(data(1,9:10),10);%100
-     thy_rate = commsHandle.parseBLE(data(1,11:12),10);
-     thz_rate = commsHandle.parseBLE(data(1,13:14),10);
-     euler_rates(k,:) = [thx_rate,thy_rate,thz_rate]; % Commanded
+     pwm1 = commsHandle.parseBLE(data(1,9:10),10);%100
+     pwm2 = commsHandle.parseBLE(data(1,11:12),10);
+     pwm3 = commsHandle.parseBLE(data(1,13:14),10);
+     pwm4 = commsHandle.parseBLE(data(1,19:20),10);
+     pwmSignals(k,:) = [pwm1,pwm2,pwm3,pwm4]; % Commanded
 
      % Store on-board packet count
      packetCount(k,:) = data(1,15:16);
@@ -404,7 +405,7 @@ while(1)
 
 
     % Tylers data
-%     Tyler(k,:) = [x_f,y_f,z_f,vx_f,vy_f,vz_f,Drone_pos_data(k,1),Drone_pos_data(k,2),Drone_pos_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),torques(k,1),torques(k,2),torques(k,3),thrust];
+    Tyler(k,:) = [x_f,y_f,z_f,vx_f,vy_f,vz_f,Drone_pos_data(k,1),Drone_pos_data(k,2),Drone_pos_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4),thrust];
     
     
     % Collect the data being sent
