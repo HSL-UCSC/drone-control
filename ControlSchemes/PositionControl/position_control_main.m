@@ -393,8 +393,8 @@ while(1)
      pwm1 = commsHandle.parseBLE(data(1,9:10),10);%100
      pwm2 = commsHandle.parseBLE(data(1,11:12),10);
      pwm3 = commsHandle.parseBLE(data(1,13:14),10);
-     pwm4 = commsHandle.parseBLE(data(1,19:20),10);
-     pwmSignals(k,:) = [pwm1,pwm2,pwm3,pwm4]; % Commanded
+%      pwm4 = commsHandle.parseBLE(data(1,19:20),10);
+     pwmSignals(k,:) = [pwm1,pwm2,pwm3]; % Commanded
 
      % Store on-board packet count
      packetCount(k,:) = data(1,15:16);
@@ -405,7 +405,7 @@ while(1)
 
 
     % Tylers data
-    Tyler(k,:) = [x_f,y_f,z_f,vx_f,vy_f,vz_f,Drone_pos_data(k,1),Drone_pos_data(k,2),Drone_pos_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4),thrust];
+%     Tyler(k,:) = [x_f,y_f,z_f,vx_f,vy_f,vz_f,Drone_pos_data(k,1),Drone_pos_data(k,2),Drone_pos_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4),thrust];
     
     
     % Collect the data being sent
