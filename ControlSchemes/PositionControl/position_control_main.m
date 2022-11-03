@@ -58,6 +58,7 @@ commsHandle = Communications();
 b = ble("C02835321733"); % ST DRONE FRAME 1
 ble_imu_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00E00000-0001-11E1-AC36-0002A5D5C51B"); % Read IMU
 ble_arm_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "20000000-0001-11E1-AC36-0002A5D5C51B"); % Read arming status
+ble_bat_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "001D0000-0001-11E1-AC36-0002A5D5C51B"); % Read battery/pressure status
 
 % Open serial port for HC12 connection
 device = serialport("COM5",19200);
@@ -160,6 +161,13 @@ for i = 1:WARMUP
     prev_z = z_f;
     
 end
+
+%% Battery level
+data = zeros(1,9); % For reading IMU
+timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
+[data(1,:), timestamps(1)] = commsHandle.readBLE(ble_bat_char);
+fprintf('Battery level: %f%%\n', data(1,1)/3); % divide by ration so 3.2 = 0%
+
 
 %% Wait for drone to be armed
 disp("Calibrate/arm drone to start autonomous flight")
