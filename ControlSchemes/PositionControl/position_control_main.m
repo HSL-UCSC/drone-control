@@ -72,6 +72,9 @@ calibrate=0;arm=0;override=0;land=0;setpointMode=0;setpointPrev=0;setpointNext=0
 
 disp("Generated Xbox controller interface")
 
+%% Load waypoints
+waypointsHandle = WaypointGenerator();
+
 %% Set up data collection vectors
 WARMUP = 250; % Filter warmup time period
 
@@ -120,9 +123,7 @@ Z_pid = PID_Controller.Zpid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
 Drone_data(1, :) = DronePos;
 
 %% SET POINT TO TRACK
-x_ref = 0.0;
-y_ref = 0.0;
-z_ref_final = 0.6; % 0.5 meter (500mm) % 0.005
+[x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
 comm_yaw_d = 128; % integer representation of 128 is 0 degrees. Min max is 30 degrees
 
 
@@ -208,15 +209,12 @@ packetCount = [];
 ahrsRec = [];
 thrusts = [];
 
-z_ref_final = 0.7;
 xRefs = [];
 yRefs = [];
 zRefs = [];
 
 
-flag1 = 0;
-flag2 = 0;
-flag3 = 0;
+
 controlMode = 0;
 landingFlag = 0;
 
@@ -262,28 +260,9 @@ while(1)
         % Circular trajectory
         x_ref = 0.5*cos(0.01*k);
         y_ref = 0.5*sin(0.01*k);
-        z_ref = z_ref_final;
     else
         % Position hover trajectory
-        x_ref = x_f - sign(x_f)*0.25;
-        if(x_f < 0.25 && x_f > -0.25)
-            flag1 = 1;
-            x_ref = 0;
-        end
-        if(flag1==1)
-            x_ref = 0;
-        end
-
-        y_ref = y_f - sign(y_f)*0.25;
-        if(y_f < 0.25 && y_f > -0.25)
-            flag2 = 1;
-            y_ref = 0;
-        end
-        if(flag2==1)
-            y_ref = 0;
-        end
-
-        z_ref = z_ref_final;
+        [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
     end
 
     % Landing condition
@@ -357,6 +336,16 @@ while(1)
     if(land && ~prevLand)
         disp("Beginning landing sequence")
         landingFlag = 1;
+    end
+    if(setpointPrev && ~prevSetpointPrev)
+        waypointsHandle.prevWaypoint()
+        [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
+        fprintf('Setpoint change: [%.2f,%.2f,%.2f]', x_ref,y_ref,z_ref);
+    end
+    if(setpointNext && ~prevSetpointNext)
+        waypointsHandle.nextWaypoint()
+        [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
+        fprintf('Setpoint change: [%.2f,%.2f,%.2f]', x_ref,y_ref,z_ref);
     end
 
 
