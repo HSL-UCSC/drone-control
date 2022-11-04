@@ -1,10 +1,10 @@
 classdef WaypointGenerator < handle
     properties 
-        waypoints = [0 0 0.5;
-                     1 1 0.5;
-                     -1 1 0.5;
-                     -1 -1 0.5;
-                     1 -1 0.5;]
+        waypoints = [0 0 0.7;
+                     0.7 0.7 0.7;
+                     -0.7 0.7 0.7;
+                     -0.7 -0.7 0.7;
+                     0.7 -0.7 0.7;]
         currWaypoint = 1;
         numWaypoints = 5;
     end 

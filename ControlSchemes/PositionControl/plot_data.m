@@ -109,7 +109,7 @@ legend("drone thy-roll rate","motive thy-roll rate");
 
     
 %% Attitude tracking
-
+close all
 figure()
 hold on;
 plot(p_z)
@@ -158,38 +158,45 @@ axis([0 k -2 2])
 % plot(Tyler(:,16))
 
 %% Tracking
-close all
+% close all
 
-figure()
-plot(loopTimes)
-title("Loop time")
-
-figure()
-plot(packetCount)
-title("Packet count")
-
-figure()
-hold on;
-% plot(-desired_attitudes(:,1));
-% plot(euler_rates(:,1))
-plot(Drone_pos_data(:,1)*180/pi)
-plot(ahrsRec(:,1))
-title("Roll tracking")
-legend("Sent Desired", "Actual Commanded", "MOCAP","AHRS")
-
-figure()
-hold on;
-% plot(desired_attitudes(:,2));
-% plot(euler_rates(:,2))
-plot(Drone_pos_data(:,2)*180/pi)
-plot(ahrsRec(:,2))
-title("Pitch tracking")
-
-legend("Sent Desired", "Actual Commanded", "MOCAP","AHRS")
 
 % figure()
+% plot(loopTimes)
+% title("Loop time")
+% 
+% figure()
+% plot(packetCount)
+% title("Packet count")
+% 
+% figure()
 % hold on;
-% plot(euler_rates(:,3))
-% plot(torques(:,3))
-% title("Yaw tracking")
-% legend("Sent Desired", "Actual Commanded", "AHRS")
+% % plot(-desired_attitudes(:,1));
+% plot(pwmSignals(:,1))
+% plot(Drone_pos_data(:,1)*180/pi)
+% plot(ahrsRec(:,1))
+% title("Pitch tracking")
+% legend("Commanded","MOCAP","AHRS")
+% 
+% figure()
+% hold on;
+% % plot(desired_attitudes(:,2));
+% plot(pwmSignals(:,2))
+% plot(Drone_pos_data(:,2)*180/pi)
+% plot(ahrsRec(:,2))
+% title("Roll tracking")
+% 
+% legend("Commanded","MOCAP","AHRS")
+
+
+
+% figure()
+hold on;
+% plot(Drone_pos_data(1:end-1,1)*180/pi - ahrsRec(:,1))
+% title("Pitch estimation error")
+
+% figure()
+plot(Drone_pos_data(1:end-1,2)*180/pi - ahrsRec(:,2))
+title("Roll estimation error")
+
+

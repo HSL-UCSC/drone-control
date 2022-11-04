@@ -162,12 +162,6 @@ for i = 1:WARMUP
     
 end
 
-%% Battery level
-data = zeros(1,9); % For reading IMU
-timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
-[data(1,:), timestamps(1)] = commsHandle.readBLE(ble_bat_char);
-fprintf('Battery level: %f%%\n', data(1,1)/3); % divide by ration so 3.2 = 0%
-
 
 %% Wait for drone to be armed
 disp("Calibrate/arm drone to start autonomous flight")
@@ -198,6 +192,14 @@ while(1)
 
     pause(0.1);
 end
+
+
+%% Battery level
+data = zeros(1,12); % For reading IMU
+timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
+[data(1,:), timestamps(1)] = commsHandle.readBLE(ble_bat_char)
+% fprintf('Battery level: %f%%\n', data(1,1)/3); % divide by ration so 3.2 = 0%
+
 
 %% Run Position Control Loop
 disp("Starting in 1 second...")
@@ -348,12 +350,12 @@ while(1)
     if(setpointPrev && ~prevSetpointPrev)
         waypointsHandle.prevWaypoint()
         [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
-        fprintf('Setpoint change: [%.2f,%.2f,%.2f]', x_ref,y_ref,z_ref);
+        fprintf('Setpoint change: [%.2f,%.2f,%.2f]\n', x_ref,y_ref,z_ref);
     end
     if(setpointNext && ~prevSetpointNext)
         waypointsHandle.nextWaypoint()
         [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
-        fprintf('Setpoint change: [%.2f,%.2f,%.2f]', x_ref,y_ref,z_ref);
+        fprintf('Setpoint change: [%.2f,%.2f,%.2f]\n', x_ref,y_ref,z_ref);
     end
 
 
@@ -387,11 +389,11 @@ while(1)
      ahrsRec(k,:) = [ahrsX, ahrsY, ahrsZ]; % AHRS
 
      % Store on-board attitude rates
-     pwm1 = commsHandle.parseBLE(data(1,9:10),10);%100
-     pwm2 = commsHandle.parseBLE(data(1,11:12),10);
-     pwm3 = commsHandle.parseBLE(data(1,13:14),10);
-%      pwm4 = commsHandle.parseBLE(data(1,19:20),10);
-     pwmSignals(k,:) = [pwm1,pwm2,pwm3]; % Commanded
+     pwm1 = commsHandle.parseBLE(data(1,9:10),1);%100
+     pwm2 = commsHandle.parseBLE(data(1,11:12),1);
+     pwm3 = commsHandle.parseBLE(data(1,13:14),1);
+     pwm4 = commsHandle.parseBLE(data(1,19:20),1);
+     pwmSignals(k,:) = [pwm1,pwm2,pwm3,pwm4]; % Commanded
 
      % Store on-board packet count
      packetCount(k,:) = data(1,15:16);
@@ -402,7 +404,7 @@ while(1)
 
 
     % Tylers data
-%     Tyler(k,:) = [x_f,y_f,z_f,vx_f,vy_f,vz_f,Drone_pos_data(k,1),Drone_pos_data(k,2),Drone_pos_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4),thrust];
+    Tyler(k,:) = [x_f,y_f,z_f,vx_f,vy_f,vz_f,Drone_pos_data(k,1),Drone_pos_data(k,2),Drone_pos_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
     
     
     % Collect the data being sent
