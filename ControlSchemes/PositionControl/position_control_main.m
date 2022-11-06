@@ -217,6 +217,7 @@ Drone_pos_data = [];
 Drone_rate_data = [];
 packetCount = [];
 ahrsRec = [];
+eulerCmdRec = [];
 thrusts = [];
 
 xRefs = [];
@@ -376,24 +377,25 @@ while(1)
     rTimes(k) = toc(rTime);
     
     
-     % Store on-board attitudes
-%      thx = commsHandle.parseBLE(data(1,3:4),10);
-%      thy = commsHandle.parseBLE(data(1,5:6),10);
-%      thz = commsHandle.parseBLE(data(1,7:8),10);
-%      euler(k,:) = [thx,thy,thz];
- 
-     % Store on-board torques
+     % Store on-board attitude estimate
      ahrsX = commsHandle.parseBLE(data(1, 3:4),10);%1
      ahrsY = commsHandle.parseBLE(data(1, 5:6),10);
      ahrsZ = commsHandle.parseBLE(data(1, 7:8),10);
      ahrsRec(k,:) = [ahrsX, ahrsY, ahrsZ]; % AHRS
 
-     % Store on-board attitude rates
-     pwm1 = commsHandle.parseBLE(data(1,9:10),1);%100
-     pwm2 = commsHandle.parseBLE(data(1,11:12),1);
-     pwm3 = commsHandle.parseBLE(data(1,13:14),1);
-     pwm4 = commsHandle.parseBLE(data(1,19:20),1);
-     pwmSignals(k,:) = [pwm1,pwm2,pwm3,pwm4]; % Commanded
+%      % Store on-board attitude rates
+%      pwm1 = commsHandle.parseBLE(data(1,9:10),1);%100
+%      pwm2 = commsHandle.parseBLE(data(1,11:12),1);
+%      pwm3 = commsHandle.parseBLE(data(1,13:14),1);
+%      pwm4 = commsHandle.parseBLE(data(1,19:20),1);
+%      pwmSignals(k,:) = [pwm1,pwm2,pwm3,pwm4]; % Commanded
+
+     % Store on-board attitude commands
+     attCmdX = commsHandle.parseBLE(data(1,9:10),10);%100
+     attCmdY = commsHandle.parseBLE(data(1,11:12),10);
+     attCmdZ = commsHandle.parseBLE(data(1,13:14),10);
+     eulerCmdRec(k,:) = [attCmdX,attCmdY,attCmdZ]; % Commanded
+
 
      % Store on-board packet count
      packetCount(k,:) = data(1,15:16);
@@ -404,7 +406,7 @@ while(1)
 
 
     % Tylers data
-    Tyler(k,:) = [x_f,y_f,z_f,vx_f,vy_f,vz_f,Drone_pos_data(k,1),Drone_pos_data(k,2),Drone_pos_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
+%     Tyler(k,:) = [x_f,y_f,z_f,vx_f,vy_f,vz_f,Drone_pos_data(k,1),Drone_pos_data(k,2),Drone_pos_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
     
     
     % Collect the data being sent
