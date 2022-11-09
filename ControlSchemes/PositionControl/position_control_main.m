@@ -1,6 +1,7 @@
 % function position_control_main = position_control_main(in1, in2) 
 clear;
 clc;
+close all;
 
 %% Documentation variables
 ExperimentNum = 0;
@@ -58,11 +59,15 @@ commsHandle = Communications();
 b = ble("C02835321733"); % ST DRONE FRAME 1
 ble_imu_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00E00000-0001-11E1-AC36-0002A5D5C51B"); % Read IMU
 ble_arm_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "20000000-0001-11E1-AC36-0002A5D5C51B"); % Read arming status
-ble_bat_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "001D0000-0001-11E1-AC36-0002A5D5C51B"); % Read battery/pressure status
+% ble_bat_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "001D0000-0001-11E1-AC36-0002A5D5C51B"); % Read battery/pressure status
+
+subscribe(ble_imu_char)
+ble_imu_char.DataAvailableFcn = @saveImuData;
 
 % Open serial port for HC12 connection
 device = serialport("COM5",19200);
 flush(device)
+
 
 disp("Successfully established bluetooth and hc12 connections")
 
@@ -195,15 +200,16 @@ end
 
 
 %% Battery level
-data = zeros(1,12); % For reading IMU
-timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
-[data(1,:), timestamps(1)] = commsHandle.readBLE(ble_bat_char)
+% data = zeros(1,12); % For reading IMU
+% timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
+% [data(1,:), timestamps(1)] = commsHandle.readBLE(ble_bat_char)
 % fprintf('Battery level: %f%%\n', data(1,1)/3); % divide by ration so 3.2 = 0%
 
 
 %% Run Position Control Loop
 disp("Starting in 1 second...")
-java.lang.Thread.sleep(1*1000);
+% java.lang.Thread.sleep(1*1000);
+pause(1);
 
 T_trim = 130;
 
@@ -211,8 +217,6 @@ k = 1;
 dT = 1/60; % 55Hz (writing only) - look into if dT might be faster 
 
 [prevDronePos] = mocapHandle.GetDronePosition();
-data = zeros(1,20); % For reading IMU
-timestamps = datetime(zeros(10,1), 0, 0); %a 10x1 array of datetime
 Drone_pos_data = [];
 Drone_rate_data = [];
 packetCount = [];
@@ -228,6 +232,13 @@ zRefs = [];
 
 controlMode = 0;
 landingFlag = 0;
+
+
+global data;
+global timestamp;
+data = zeros(1,20); % For reading IMU
+timestamp = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
+rec = [];
 
 startT = tic; 
 while(1)
@@ -372,10 +383,10 @@ while(1)
 
     
     % Read latest BLE
-    rTime = tic;
-    [data(1,:), timestamps(1)] = commsHandle.readBLE(ble_imu_char);
-    rTimes(k) = toc(rTime);
-    
+%     rTime = tic;
+%     [data(1,:), timestamps(1)] = commsHandle.readBLE(ble_imu_char);
+%     rTimes(k) = toc(rTime);
+%      rec(k,:)=data(1,:);
     
      % Store on-board attitude estimate
      ahrsX = commsHandle.parseBLE(data(1, 3:4),10);%1
@@ -424,7 +435,8 @@ while(1)
 
     % Sleep delay 
     s = tic;
-    java.lang.Thread.sleep(5); % 5ms delay
+%     java.lang.Thread.sleep(5); % 5ms delay
+    pause(0.005)
     sleepTimes(k) = toc(s);
 
 
@@ -437,7 +449,8 @@ ik = 0;
 while ik < 10
     %QUIT
     commsHandle.sendAttitudeCmdPacket(device,128,0,128,128);
-    java.lang.Thread.sleep(10);
+%     java.lang.Thread.sleep(10);
+    pause(0.01)
     ik = ik+1;
 end
 
@@ -450,4 +463,25 @@ save(filename)
 % Signal to UI that program is done
 memMap.Data(3) = 1;
 
+% Unsub from BLE
+unsubscribe(ble_imu_char)
+clear ble_imu_char;
+
 disp('Done')
+
+
+
+
+
+function saveImuData(src,evt)
+    global data;
+    global timestamp;
+    [data,timestamp] = read(src,'oldest');
+end
+
+
+
+
+
+
+

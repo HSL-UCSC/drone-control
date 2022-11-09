@@ -5,8 +5,8 @@ classdef PID_Controller
                 
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
-            K_p = 200; % Shouldnt do anything with 100 (maybe 1 degree commanded) % 250,0,1 best for just commanding x
-            K_i = 5; % 350,5,200 was last gains 300,10,100
+            K_p = 250; % Shouldnt do anything with 100 (maybe 1 degree commanded) % 250,0,1 best for just commanding x
+            K_i = 15; % 350,5,200 was last gains 300,10,100
             K_d = 350;
             
             % Proportional
@@ -46,8 +46,8 @@ classdef PID_Controller
             
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
-            K_p = 200; % Shouldnt do anything with 100 (maybe 1 degree commanded)
-            K_i = 5;
+            K_p = 250; % Shouldnt do anything with 100 (maybe 1 degree commanded)
+            K_i = 15;
             K_d = 350; %
             
             % Proportional
