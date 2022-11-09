@@ -9,6 +9,12 @@ An interface for ST Microelectronics STEVAL-FCU001V1 drone.
 * Packet loss fault detection, emergency on-board hover/land operation
 * Mechanism to switch between various controllers/estimators both on and off-board
 
+## Quadrotor setup
+..
+
+## Xbox Control
+..
+
 ## Running Experiments
 ...
 

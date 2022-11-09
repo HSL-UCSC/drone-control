@@ -1,28 +1,21 @@
-%% Clear past data
-close all;  
-clear all;
+% function position_control_main = position_control_main(in1, in2) 
+clear;
 clc;
+close all;
 
 %% Documentation variables
 ExperimentNum = 0;
 DroneNum = 0;
 ExperimentType = "P";
 
-load("AFOSR_Results\1-C_Metadata.mat",'ExperimentNum','DroneNum','ExperimentType');
-
+load("AFOSR_Results\1-C_Metadata.mat",'ExperimentNum','DroneNum','ExperimentType');   
 ExperimentNum = ExperimentNum + 1;
-
 expStr = int2str(ExperimentNum);
 droneStr = int2str(DroneNum);
-
 filename = sprintf("AFOSR_Results/%s-%s_Metadata", droneStr, ExperimentType);
-
 save(filename, 'ExperimentNum', 'DroneNum', 'ExperimentType');
-
 timeNow = "mm-dd-yy_HH-MM";
-
 filenameDate = datestr(now, timeNow);
-
 filename = sprintf("AFOSR_Results/%s-%s-%s_%s",droneStr,ExperimentType,expStr, filenameDate);
 
 
@@ -36,78 +29,77 @@ else
 end
 TRAJECTORY = 1;
 
+%% Setting up data transfer memory share
+memshare_filename = fullfile(tempdir, 'position_control_memshare.dat');
+
+% Open the memshare file
+[f, msg] = fopen(memshare_filename, 'w');
+if f ~= -1
+    fwrite(f, zeros(1,256), 'double');
+    fclose(f);
+else
+    error('MATLAB:demo:send:cannotOpenFile', ...
+          'Cannot open file "%s": %s.', memshare_filename, msg);
+end
+%     end
+ 
+% Memory map the file.
+memMap = memmapfile(memshare_filename, 'Writable', true, 'Format', 'double');
+
+
 %% Instantiate client object to run Motive API commands
-% https://optitrack.com/software/natnet-sdk/
-
-% Create Motive client object
 dllPath = fullfile('d:','StDroneControl','NatNetSDK','lib','x64','NatNetML.dll');
-assemblyInfo = NET.addAssembly(dllPath); % Add API function calls
-theClient = NatNetML.NatNetClientML(0);
+mocapHandle = MocapAPI();
+mocapHandle.init(dllPath)
 
-% Create connection to localhost, data is now being streamed through client object
-HostIP = '127.0.0.1';
-theClient.Initialize(HostIP, HostIP); 
+%% Connect to the Drone via Radio & BLE
+commsHandle = Communications();
 
-%% Connect to the Drone via Radio
-%Make sure to get the the Drone's MAC address before running this code -
+% Create bluetooth connection
 b = ble("C02835321733"); % ST DRONE FRAME 1
-% b = ble("C0286E325133"); % FOAM CORE FRAME 1
+ble_imu_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00E00000-0001-11E1-AC36-0002A5D5C51B"); % Read IMU
+ble_arm_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "20000000-0001-11E1-AC36-0002A5D5C51B"); % Read arming status
+% ble_bat_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "001D0000-0001-11E1-AC36-0002A5D5C51B"); % Read battery/pressure status
 
-char = b.Characteristics; % Get the characteristics of the Drone
+subscribe(ble_imu_char)
+ble_imu_char.DataAvailableFcn = @saveImuData;
 
-device = serialport("COM5",19200)
+% Open serial port for HC12 connection
+device = serialport("COM5",19200);
 flush(device)
-startByte = 245; 
-endByte = 2;
 
-%% Assign the rigid body id. Double check with motive that the rigid body ID is correct.killswitch
 
-Drone_ID = 1;
-%Drone_ID = 2;
+disp("Successfully established bluetooth and hc12 connections")
 
-%% Store the reference to the Charactersitic responsible for Writing Joystick data:
-% https://www.st.com/resource/en/user_manual/dm00550659-getting-started-with-the-bluest-protocol-and-sdk-stmicroelectronics.pdf
-        % To send Joydata you need to send an array of 7 elements:
-        % First element:- No idea what this does.
-        % Second element:- rudder value (gRUD) 128 is like sending 0 (YAW)
-        % Third element:- thrust value (gTHR) (THRUST)
-        % Fourth element:- AIL value (gAIL) 128 is like sending 0  (ROLL)
-        % Fifth element:- ELE value (gELE) 128 is like sending 0  (PITCH)
-        % Sixth element:- SEEKBAR value: mainly from android app just send 0.
-        % Seventh element:- ARMING and CALIB: 0x04, 0x05, 0x01(For calib)
-joy_c = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00008000-0001-11E1-AC36-0002A5D5C51B"); % Write w/out response
-% joy_c_imu = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00E00000-0001-11E1-AC36-0002A5D5C51B") % Read IMU
-joy_c_imu = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00E00000-0001-11E1-AC36-0002A5D5C51B") % Read IMU
+%% Load XBox Controller
+xboxControllerHandle = XboxController();
+xboxControllerHandle.init()
+calibrate=0;arm=0;override=0;land=0;setpointMode=0;setpointPrev=0;setpointNext=0;
 
-%% Next calibrate/arm the drone
-% Reference slides 25,26 from - https://www.st.com/content/ccc/resource/sales_and_marketing/presentation/product_presentation/group0/bd/cc/11/15/14/d4/4a/85/STEVAL-DRONE01_GETTING_STARTED_GUIDE/files/steval-drone01_getting_started_guide.pdf/jcr:content/translations/en.steval-drone01_getting_started_guide.pdf
+disp("Generated Xbox controller interface")
 
-% 1) Place drone down flat and press reset button to calibrate it
-% 2) Arm the drone: 
-write(joy_c, [22, 128, 0, 128, 128, 0, 4], 'uint8', "WithoutResponse");
-java.lang.Thread.sleep(2*1000); % Java sleep is much more accurate than matlab's pause (sleep in ms)
-% write(joy_c, [22, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
+%% Load waypoints
+waypointsHandle = WaypointGenerator();
 
 %% Set up data collection vectors
-ITERATIONS = 1500 % Main loop time period
-WARMUP = 100; % Filter warmup time period
+WARMUP = 250; % Filter warmup time period
 
 % Data collection vectors
-Drone_data = zeros(ITERATIONS + 2, 7);  % drone position data
-sent_data = zeros(ITERATIONS + 1, 3); % data sent to drone
-cont_actual_data = zeros(ITERATIONS + 1, 9);
+Drone_data = [];%zeros(ITERATIONS + 2, 7);  % drone position data
+sent_data = [];%zeros(ITERATIONS + 1, 3); % data sent to drone
+cont_actual_data = [];%zeros(ITERATIONS + 1, 9);
 errors = [];
-desired_attitudes =  zeros(ITERATIONS + 1, 2);
+desired_attitudes = [];%zeros(ITERATIONS + 1, 2);
 
 % X,Y,Z position data
-p_x = zeros(ITERATIONS + 1, 1);
-p_y = zeros(ITERATIONS + 1, 1);
-p_z = zeros(ITERATIONS + 1, 1);
+p_x = [];%zeros(ITERATIONS + 1, 1);
+p_y = [];%zeros(ITERATIONS + 1, 1);
+p_z = [];%zeros(ITERATIONS + 1, 1);
 
 % Filtered velocity data
-f_v_x = zeros(ITERATIONS + 1, 1);
-f_v_y = zeros(ITERATIONS + 1, 1);
-f_v_z = zeros(ITERATIONS + 1, 1);
+f_v_x = [];%zeros(ITERATIONS + 1, 1);
+f_v_y = [];%zeros(ITERATIONS + 1, 1);
+f_v_z = [];%zeros(ITERATIONS + 1, 1);
 
 % Timing diagnostics
 wTimes          = [];
@@ -115,6 +107,8 @@ rTimes          = [];
 loopTimes       = [];
 sleepTimes      = [];
 getPosTimes     = [];
+memShareTimes   = [];
+xboxTimes       = [];
 
 %% Frequencies
 OUT_FREQ = 60; % 60Hz write only
@@ -123,104 +117,134 @@ CUT_OFF_FREQ_POS = 10;
 
 %% Mass of the drone
 m = 69.89/1000;
-MAX_ANGLE = 27.73;
+MAX_ANGLE = 30.0;% 27.73;
 
 %% Inititalize the PID controllers
-X_pid = Xpid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
-Y_pid = Ypid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
-Z_pid = Zpid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
+X_pid = PID_Controller.Xpid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
+Y_pid = PID_Controller.Ypid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
+Z_pid = PID_Controller.Zpid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
 
 %% Get the Drone data
-[DronePos] = GetDronePosition(theClient, Drone_ID);
+[DronePos] = mocapHandle.GetDronePosition();
 Drone_data(1, :) = DronePos;
 
 %% SET POINT TO TRACK
-x_ref = 0.0;
-y_ref = 0.0;
-z_ref_final = 0.6; % 0.5 meter (500mm) % 0.005
+[x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
 comm_yaw_d = 128; % integer representation of 128 is 0 degrees. Min max is 30 degrees
 
 
 %% Initialize lowpass filter
-[DronePos] = GetDronePosition(theClient, Drone_ID);
-lpfData_x = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(2));
-lpfData_y = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(3));
-lpfData_z = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(4));
+[DronePos] = mocapHandle.GetDronePosition();
+lpfData_x = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(2));
+lpfData_y = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(3));
+lpfData_z = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_POS, DronePos(4));
 
-lpfData_vx = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_VEL, 0);
-lpfData_vy = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_VEL, 0);
-lpfData_vz = lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_VEL, 0);
+lpfData_vx = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_VEL, 0);
+lpfData_vy = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_VEL, 0);
+lpfData_vz = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_VEL, 0);
 
 prev_x =  DronePos(2);
 prev_y =  DronePos(3);
 prev_z =  DronePos(4);
 
 %% Warm up Filter
+disp("Running warmup filter")
 for i = 1:WARMUP
-    [DronePos] = GetDronePosition(theClient, Drone_ID);
+    [DronePos] = mocapHandle.GetDronePosition();
     %Drone_data = [Drone_data; DronePos];
     
-    [x_f, lpfData_x] = lpf_2(lpfData_x, DronePos(2));
-    [vx_f, lpfData_vx] = lpf_2(lpfData_vx, x_f - prev_x);
+    [x_f, lpfData_x] = Filter.lpf_2(lpfData_x, DronePos(2));
+    [vx_f, lpfData_vx] = Filter.lpf_2(lpfData_vx, x_f - prev_x);
     prev_x = x_f;
     
-    [y_f, lpfData_y] = lpf_2(lpfData_y, DronePos(3));
-    [vy_f, lpfData_vy] = lpf_2(lpfData_vy, y_f - prev_y);
+    [y_f, lpfData_y] = Filter.lpf_2(lpfData_y, DronePos(3));
+    [vy_f, lpfData_vy] = Filter.lpf_2(lpfData_vy, y_f - prev_y);
     prev_y = y_f;
     
-    [z_f, lpfData_z] = lpf_2(lpfData_z, DronePos(4));
-    [vz_f, lpfData_vz] = lpf_2(lpfData_vz, z_f - prev_z);
+    [z_f, lpfData_z] = Filter.lpf_2(lpfData_z, DronePos(4));
+    [vz_f, lpfData_vz] = Filter.lpf_2(lpfData_vz, z_f - prev_z);
     prev_z = z_f;
     
 end
 
-%% Run Radio Check
-disp("Running radio check (5 seconds)")
-% for i=1:1000
-%     [data, timestamps] = read(joy_c_imu, 'latest');
-%     write(device,[startByte, 128, 0, 128, 128, endByte],"uint8") % comm_thr_d
-%     java.lang.Thread.sleep(5); % 10ms delay
-%     packetCount = data(15:16)
-% end
 
-%% Run Main Loop
-disp("Starting")
-java.lang.Thread.sleep(5*1000); % Wait 5 seconds
+%% Wait for drone to be armed
+disp("Calibrate/arm drone to start autonomous flight")
+data = zeros(1,3); % For reading IMU
+timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
+
+toggleArm = 0;
+while(1)
+    % Check if status onboard is armed
+    [data(1,:), timestamps(1)] = commsHandle.readBLE(ble_arm_char);
+    if(data(1,3) == 1)
+        toggleArm = 1;
+        break;
+    end
+    
+    % Check xbox input and send arm command when 'RB' is pressed
+    prevCalibrate=calibrate;prevArm=arm;prevOverride=override;prevLand=land;prevSetpointMode=setpointMode;prevSetpointPrev=setpointPrev;prevSetpointNext=setpointNext;
+    [xbox_comm_thrust,xbox_comm_yaw,xbox_comm_pitch,xbox_comm_roll,calibrate,arm,override,land, ...
+        setpointMode,setpointPrev,setpointNext] = xboxControllerHandle.getState();
+    if(arm && ~prevArm)
+        disp("Arming")
+        commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_ARM, 1);
+    end
+    if(calibrate && ~prevCalibrate)
+        disp("Calibrating")
+        commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_CAL, 1);
+    end
+
+    pause(0.1);
+end
+
+
+%% Battery level
+% data = zeros(1,12); % For reading IMU
+% timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
+% [data(1,:), timestamps(1)] = commsHandle.readBLE(ble_bat_char)
+% fprintf('Battery level: %f%%\n', data(1,1)/3); % divide by ration so 3.2 = 0%
+
+
+%% Run Position Control Loop
+disp("Starting in 1 second...")
+% java.lang.Thread.sleep(1*1000);
+pause(1);
 
 T_trim = 130;
 
 k = 1;
 dT = 1/60; % 55Hz (writing only) - look into if dT might be faster 
 
-[prevDronePos] = GetDronePosition(theClient, Drone_ID);
-data = zeros(ITERATIONS+1,20); % For reading IMU
-timestamps = datetime(zeros(10,1), 0, 0); %a 10x1 array of datetime
+[prevDronePos] = mocapHandle.GetDronePosition();
 Drone_pos_data = [];
 Drone_rate_data = [];
 packetCount = [];
-x_torques = [];
+ahrsRec = [];
+eulerCmdRec = [];
+thrusts = [];
 
-z_ref_final = 0.7;
 xRefs = [];
 yRefs = [];
 zRefs = [];
 
 
-flag1 = 0;
-flag2 = 0;
-flag3 = 0;
-% subscribe(joy_c_imu,"notification")
-while(k <= ITERATIONS)
-%     if(k>1500)
-%         pause(0.1)
-%     end
-    %read(joy_c_imu);
 
-    startT = tic;   
-    
+controlMode = 0;
+landingFlag = 0;
+
+
+global data;
+global timestamp;
+data = zeros(1,20); % For reading IMU
+timestamp = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
+rec = [];
+
+startT = tic; 
+while(1)
     % Get new drone position and store
     startTPos = tic;
-    [DronePos] = GetDronePosition(theClient, Drone_ID);
+    [DronePos] = mocapHandle.GetDronePosition();
     getPosTimes(k) = toc(startTPos);    
     Drone_data(k+1, :) = DronePos;
     
@@ -230,101 +254,72 @@ while(k <= ITERATIONS)
     
 
     % Apply low pass filter to position/velocity measurements
-    [x_f, lpfData_x] = lpf_2(lpfData_x, DronePos(2));
+    [x_f, lpfData_x] = Filter.lpf_2(lpfData_x, DronePos(2));
     p_x(k) = x_f;
-    [vx_f, lpfData_vx] = lpf_2(lpfData_vx, (x_f - prev_x)/dT);
+    [vx_f, lpfData_vx] = Filter.lpf_2(lpfData_vx, (x_f - prev_x)/dT);
     f_v_x(k) = vx_f;
     prev_x = x_f;
     
-    [y_f, lpfData_y] = lpf_2(lpfData_y, DronePos(3));
+    [y_f, lpfData_y] = Filter.lpf_2(lpfData_y, DronePos(3));
     p_y(k) = y_f;
-    [vy_f, lpfData_vy] = lpf_2(lpfData_vy, (y_f - prev_y)/dT);
+    [vy_f, lpfData_vy] = Filter.lpf_2(lpfData_vy, (y_f - prev_y)/dT);
     f_v_y(k) = vy_f;
     prev_y = y_f;
     
-    [z_f, lpfData_z] = lpf_2(lpfData_z, DronePos(4));
+    [z_f, lpfData_z] = Filter.lpf_2(lpfData_z, DronePos(4));
     p_z(k) = z_f;
-    [vz_f, lpfData_vz] = lpf_2(lpfData_vz, (z_f - prev_z)/dT);
+    [vz_f, lpfData_vz] = Filter.lpf_2(lpfData_vz, (z_f - prev_z)/dT);
     f_v_z(k) = vz_f;
     prev_z = z_f;
     
+    % Get dT loop time
+    loopTimes(k) = toc(startT);
+    dT = loopTimes(k);
+    startT = tic;
     
-    
-   
-    x_ref = 0;
+    % Reference decision while flying
     if(TRAJECTORY == 0)
         % Circular trajectory
         x_ref = 0.5*cos(0.01*k);
+        y_ref = 0.5*sin(0.01*k);
     else
         % Position hover trajectory
-        x_ref = x_f - sign(x_f)*0.25;
-        if(x_f < 0.25 && x_f > -0.25)
-            flag1 = 1;
-            x_ref = 0;
-        end
-        if(flag1==1)
-            x_ref = 0;
+        [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
+    end
+
+    % Landing condition
+    if(landingFlag)
+        x_ref = 0;
+        y_ref = 0;
+        z_ref = z_f - 0.10;
+
+        if(z_f < 0.1)
+            disp("Landed")
+            break;
         end
     end
-    
-    
+
 
     % Store the refs
     xRefs(k) = x_ref;
     % Call the X Controller - Desired Roll
-    [ddot_x_d, pid_output_x, X_pid] = Xcontroller(X_pid, x_ref, x_f, vx_f, dT, 1/CUT_OFF_FREQ_VEL,k);
-    
+    [ddot_x_d, pid_output_x, X_pid] = PID_Controller.Xcontroller(X_pid, x_ref, x_f, vx_f, dT);
 
-
-    y_ref = 0;
-    if(TRAJECTORY == 0)
-        % Circular trajectory
-        y_ref = 0.5*sin(0.01*k);
-    else
-        % Position hover trajectory
-        y_ref = y_f - sign(y_f)*0.25;
-        if(y_f < 0.25 && y_f > -0.25)
-            flag2 = 1;
-            y_ref = 0;
-        end
-        if(flag2==1)
-            y_ref = 0;
-        end
-    end
-    
-    
-
-    % Store the refs
     yRefs(k) = y_ref;
     % Call the Y Controller - Desired Pitch
-    [ddot_y_d, pid_output_y, Y_pid] = Ycontroller(Y_pid, y_ref, y_f, vy_f, dT, 1/CUT_OFF_FREQ_VEL,k);
-    
-    
-%     z_ref = z_f + 0.15;
-%     if(z_f > z_ref_final - 0.2)
-%         flag3 = 1;
-%         z_ref = z_ref_final;
-%     end
-%     if(flag3==1)
-%         z_ref = z_ref_final;
-%     end
-    
-    % Store the refs
-    zRefs(k) = z_ref_final;
+    [ddot_y_d, pid_output_y, Y_pid] = PID_Controller.Ycontroller(Y_pid, y_ref, y_f, vy_f, dT);
+
+    zRefs(k) = z_ref;
     % Call the Z Controller - Desired Thrust
-    [gTHR, pid_output_z, Z_pid] = Zcontroller(Z_pid, z_ref_final, z_f, vz_f, dT, 1/CUT_OFF_FREQ_VEL,k);
+    [gTHR, pid_output_z, Z_pid] = PID_Controller.Zcontroller(Z_pid, z_ref, z_f, vz_f, dT);
     
     % Apply trim input thrust
     comm_thr_d = gTHR + T_trim;
     
     % Calculate desired roll,pitch angles - From Harsh Report
     psi = DronePos(7); % yaw
-%     psi = 0;
     phi_d = -m/single(comm_thr_d) * (ddot_x_d*cos(psi) + ddot_y_d*sin(psi))* 180/pi; % MIGHT NEED TO REPLACE comm_thr_d with actual thrust sent to actuators on drone
     theta_d = m/single(comm_thr_d) * (-ddot_y_d*cos(psi) + ddot_x_d*sin(psi)) * 180/pi;
-    
-%     theta_d = 0.5; % Dont command y-pitch yet (0.5 offset)
-%     phi_d = 0.5; % Dont command x-roll yet
     
     % Cap angles
     phi_d = min(max(-MAX_ANGLE, phi_d), MAX_ANGLE);
@@ -334,36 +329,95 @@ while(k <= ITERATIONS)
     slope_m = 255.0/(MAX_ANGLE - -MAX_ANGLE);
     comm_phi_d = uint8(slope_m *(phi_d + MAX_ANGLE));
     comm_theta_d = uint8(slope_m *(theta_d + MAX_ANGLE));
-    % Need a pitch offset
     
-    %Send the command to the Drone
-%     if k<100
-%         wTime = tic;
-%     %     write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
-%         [data(k,:), timestamps(k)] = read(joy_c_imu, 'latest');
-%         write(device,[startByte, 128, 0, 128, 128, endByte],"uint8") % comm_thr_d
-%         wTimes(k) = toc(wTime);
-%     else
-        wTime = tic;
-    %     write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
-        [data(k,:), timestamps(k)] = read(joy_c_imu, 'latest');
-        write(device,[startByte, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, endByte],"uint8") % comm_thr_d
-        wTimes(k) = toc(wTime);
-%     end
+    % Get latest xbox controller input
+    xboxTime = tic;
+    prevCalibrate=calibrate;prevArm=arm;prevOverride=override;prevLand=land;prevSetpointMode=setpointMode;prevSetpointPrev=setpointPrev;prevSetpointNext=setpointNext;
+    [xbox_comm_thrust,xbox_comm_yaw,xbox_comm_pitch,xbox_comm_roll,calibrate,arm,override,land, ...
+        setpointMode,setpointPrev,setpointNext] = xboxControllerHandle.getState();
+    xboxTimes(k) = toc(xboxTime);
+
+    % Send updates/commands to the Drone
+    wTime = tic;
     
+    % Send data update
+    if(override && ~prevOverride)
+        disp("Toggling override")
+        controlMode = xor(controlMode,1); % Toggle AOMC (0) and MOMC (1)
+        commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_CM, controlMode);
+    end
+    if(arm && ~prevArm)
+        disp("Toggling arm command")
+        toggleArm = xor(toggleArm,1);
+        commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_ARM, toggleArm);
+    end
+    if(calibrate && ~prevCalibrate)
+        disp("Calibrating")
+        commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_CAL, 1);
+    end
+    if(land && ~prevLand)
+        disp("Beginning landing sequence")
+        landingFlag = 1;
+    end
+    if(setpointPrev && ~prevSetpointPrev)
+        waypointsHandle.prevWaypoint()
+        [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
+        fprintf('Setpoint change: [%.2f,%.2f,%.2f]\n', x_ref,y_ref,z_ref);
+    end
+    if(setpointNext && ~prevSetpointNext)
+        waypointsHandle.nextWaypoint()
+        [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
+        fprintf('Setpoint change: [%.2f,%.2f,%.2f]\n', x_ref,y_ref,z_ref);
+    end
+
+
+    % Send attitude command
+    if(controlMode == 1)
+        commsHandle.sendAttitudeCmdPacket(device,xbox_comm_yaw,xbox_comm_thrust,xbox_comm_roll,xbox_comm_pitch);
+    else
+        commsHandle.sendAttitudeCmdPacket(device,comm_yaw_d,comm_thr_d,comm_phi_d,comm_theta_d);
+    end
+    wTimes(k) = toc(wTime);
     
+
+
     
+    % Read latest BLE
+%     rTime = tic;
+%     [data(1,:), timestamps(1)] = commsHandle.readBLE(ble_imu_char);
+%     rTimes(k) = toc(rTime);
+%      rec(k,:)=data(1,:);
     
-    
-     %%%
-     [thx,thy,thz] = parse_ble_euler(data(k,3:8),10);
-     euler(k,:) = [thx,thy,thz];
-     [thx_rate,thy_rate,thz_rate] = parse_ble_euler(data(k,9:14),100);
-     euler_rates(k,:) = [thx_rate,thy_rate,thz_rate];
-     packetCount(k,:) = data(k,15:16);
-     torque = parse_ble(data(k, 19:20),1);
-     x_torques(k,:) = torque;
-    
+     % Store on-board attitude estimate
+     ahrsX = commsHandle.parseBLE(data(1, 3:4),10);%1
+     ahrsY = commsHandle.parseBLE(data(1, 5:6),10);
+     ahrsZ = commsHandle.parseBLE(data(1, 7:8),10);
+     ahrsRec(k,:) = [ahrsX, ahrsY, ahrsZ]; % AHRS
+
+%      % Store on-board attitude rates
+%      pwm1 = commsHandle.parseBLE(data(1,9:10),1);%100
+%      pwm2 = commsHandle.parseBLE(data(1,11:12),1);
+%      pwm3 = commsHandle.parseBLE(data(1,13:14),1);
+%      pwm4 = commsHandle.parseBLE(data(1,19:20),1);
+%      pwmSignals(k,:) = [pwm1,pwm2,pwm3,pwm4]; % Commanded
+
+     % Store on-board attitude commands
+     attCmdX = commsHandle.parseBLE(data(1,9:10),10);%100
+     attCmdY = commsHandle.parseBLE(data(1,11:12),10);
+     attCmdZ = commsHandle.parseBLE(data(1,13:14),10);
+     eulerCmdRec(k,:) = [attCmdX,attCmdY,attCmdZ]; % Commanded
+
+
+     % Store on-board packet count
+     packetCount(k,:) = data(1,15:16);
+
+     % Store on-board thrust
+     thrust = commsHandle.parseBLE(data(1, 19:20),1);
+     thrusts(k,:) = thrust;
+
+
+    % Tylers data
+%     Tyler(k,:) = [x_f,y_f,z_f,vx_f,vy_f,vz_f,Drone_pos_data(k,1),Drone_pos_data(k,2),Drone_pos_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
     
     
     % Collect the data being sent
@@ -371,272 +425,62 @@ while(k <= ITERATIONS)
     sent_data(k, :) = [comm_thr_d, comm_phi_d, comm_theta_d];
     cont_actual_data(k, :) = [pid_output_x, pid_output_y, pid_output_z];
     desired_attitudes(k, :) = [theta_d, phi_d];
+    
+    % Memshare data
+    memShareT = tic;
+    memMap.Data(1) = ahrsRec(k,1); % AHRS
+    memMap.Data(2) = Drone_pos_data(k,1)*180/pi;  
+    memShareTimes(k) = toc(memShareT);
 
+
+    % Sleep delay 
     s = tic;
-    java.lang.Thread.sleep(5); % 15ms delay
+%     java.lang.Thread.sleep(5); % 5ms delay
+    pause(0.005)
     sleepTimes(k) = toc(s);
 
 
-    loopTimes(k) = toc(startT);
-%     dT = loopTimes(k);
-    
     k = k+1;
 end
-
-
-
-
-
-% Land at the origin
-x_ref = 0;
-y_ref = 0;
-
-disp("Landing")
-% Landing phase
-while(z_f > 0.1)
-    startT = tic;
-    
-
-    z_ref = z_f - 0.10;
-    zRefs(k) = z_ref;
-
-    % Get new drone position and store
-    startTPos = tic;
-    [DronePos] = GetDronePosition(theClient, Drone_ID);
-    getPosTimes(k) = toc(startTPos);    
-    Drone_data(k+1, :) = DronePos;
-
-    % Apply low pass filter to position/velocity measurements
-    [x_f, lpfData_x] = lpf_2(lpfData_x, DronePos(2));
-    p_x(k) = x_f;
-    [vx_f, lpfData_vx] = lpf_2(lpfData_vx, (x_f - prev_x)/dT);
-    f_v_x(k) = vx_f;
-    prev_x = x_f;
-    
-    [y_f, lpfData_y] = lpf_2(lpfData_y, DronePos(3));
-    p_y(k) = y_f;
-    [vy_f, lpfData_vy] = lpf_2(lpfData_vy, (y_f - prev_y)/dT);
-    f_v_y(k) = vy_f;
-    prev_y = y_f;
-    
-    [z_f, lpfData_z] = lpf_2(lpfData_z, DronePos(4));
-    p_z(k) = z_f;
-    [vz_f, lpfData_vz] = lpf_2(lpfData_vz, (z_f - prev_z)/dT);
-    f_v_z(k) = vz_f;
-    prev_z = z_f;
-    
-    
-    % Call the X Controller - Desired Roll
-    [ddot_x_d, pid_output_x, X_pid] = Xcontroller(X_pid, x_ref, x_f, vx_f, dT, 1/CUT_OFF_FREQ_VEL,k);
-    
-    % Call the Y Controller - Desired Pitch
-    [ddot_y_d, pid_output_y, Y_pid] = Ycontroller(Y_pid, y_ref, y_f, vy_f, dT, 1/CUT_OFF_FREQ_VEL,k);
-    
-    % Call the Z Controller - Desired Thrust
-    [gTHR, pid_output_z, Z_pid] = Zcontroller(Z_pid, z_ref, z_f, vz_f, dT, 1/CUT_OFF_FREQ_VEL,k);
-    
-    % Apply trim input thrust
-    comm_thr_d = gTHR + T_trim;
-    
-    % Calculate desired roll,pitch angles - From Harsh Report
-    psi = DronePos(7); % yaw
-%     psi = 0;
-    phi_d = -m/single(comm_thr_d) * (ddot_x_d*cos(psi) + ddot_y_d*sin(psi))* 180/pi; % MIGHT NEED TO REPLACE comm_thr_d with actual thrust sent to actuators on drone
-    theta_d = m/single(comm_thr_d) * (-ddot_y_d*cos(psi) + ddot_x_d*sin(psi)) * 180/pi;
-%     theta_d = 0.5; % Dont command y-pitch yet - ADD IN OFFSET
-%     phi_d = 0.5; % Dont command x-roll yet
-    
-    % Cap angles
-    phi_d = min(max(-MAX_ANGLE, phi_d), MAX_ANGLE);
-    theta_d = min(max(-MAX_ANGLE, theta_d), MAX_ANGLE);
-    
-    % Convert the angles to 0 - 255
-    slope_m = 255.0/(MAX_ANGLE - -MAX_ANGLE);
-    comm_phi_d = uint8(slope_m *(phi_d + MAX_ANGLE));
-    comm_theta_d = uint8(slope_m *(theta_d + MAX_ANGLE));
-    
-    %Send the command to the Drone
-    wTime = tic;
-%      write(joy_c, [0, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, 0, 5], 'uint8', "WithoutResponse") % ~18ms
-    [data(k,:), timestamps(k)] = read(joy_c_imu, 'latest');
-    write(device,[startByte, comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d, endByte],"uint8")%comm_thr_d
-    wTimes(k) = toc(wTime);
-    
-%     [thx,thy,thz] = parse_ble_euler(data(k,3:8),10);
-%      euler(k,:) = [thx,thy,thz];
-%      [thx_rate,thy_rate,thz_rate] = parse_ble_euler(data(k,9:14),100);
-%      euler_rates(k,:) = [thx_rate,thy_rate,thz_rate];
-     
-    %%%
-    packetCount(k,:) = data(k,15:16);
-    torque = parse_ble(data(k, 19:20),1);
-    x_torques(k,:) = torque;
-    % Collect the data being sent
-    errors(k) = Y_pid.y_curr_error;
-    sent_data(k, :) = [comm_thr_d, comm_phi_d, comm_theta_d];
-    cont_actual_data(k, :) = [pid_output_x, pid_output_y, pid_output_z];
-    desired_attitudes(k, :) = [theta_d, phi_d];
-
-    java.lang.Thread.sleep(5); % 10ms delay
-
-    loopTimes(k) = toc(startT);
-%     dT = loopTimes(k);
- 
-    k = k+1;
-    
-end
-
-
-
-
 
 % Shut off drone
 disp("Shutting Down")
-write(device,[startByte, 128, 0, 128, 128, endByte],"uint8")
 ik = 0;
 while ik < 10
     %QUIT
-    write(device,[startByte, 128, 0, 128, 128, endByte],"uint8")
-    java.lang.Thread.sleep(10);
+    commsHandle.sendAttitudeCmdPacket(device,128,0,128,128);
+%     java.lang.Thread.sleep(10);
+    pause(0.01)
     ik = ik+1;
 end
 
-% write(joy_c, [0, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
-% ik = 0;
-% while ik < 10
-%     %QUIT
-%     write(joy_c, [0, 128, 0, 128, 128, 0, 0], 'uint8', "WithoutResponse");
-%     java.lang.Thread.sleep(10);
-%     ik = ik+1;
-% end
 % Finally, Close the Motive Client
-theClient.Uninitialize();
-
-disp('Done')
+mocapHandle.shutdown();
 
 % Saving Workspace to file
 save(filename)
 
+% Signal to UI that program is done
+memMap.Data(3) = 1;
 
-%% Display Results
-close all
+% Unsub from BLE
+unsubscribe(ble_imu_char)
+clear ble_imu_char;
 
-figure()
-plot(Drone_data(:,5)*180/pi)
-% hold on;
-% plot(desired_attitudes(:,1))
-title("Pitch");
-
-figure()
-plot(Drone_data(:,6)*180/pi)
-% hold on;
-% plot(desired_attitudes(:,2))
-title("Roll");
-
-figure()
-hold on;
-plot(p_z)
-plot(z_ref_final*ones(size(p_z,1)));
-title("Height");
-legend("Z", "Z_ref")
-axis([0 ITERATIONS 0 2])
-grid on;
-
-figure()
-hold on;
-plot(p_x)
-plot(xRefs);
-title("X");
-legend("X", "X_ref")
-axis([0 ITERATIONS -2 2])
-
-figure()
-hold on;
-plot(p_y)
-plot(yRefs);
-title("Y");
-legend("Y", "Y_ref")
-axis([0 ITERATIONS -2 2])
-
-figure()
-plot(p_x,p_y)
-axis([-2 2 -2 2])
-
-% PID Output X
-figure()
-plot(cont_actual_data(:,1:3))
-title("PID X Output");
-legend("p","i","d")
-
-% PID Output Y
-figure()
-plot(cont_actual_data(:,4:6))
-title("PID Y Output");
-legend("p","i","d")
-
-% PID Output Z
-figure()
-plot(cont_actual_data(:,7:9))
-title("PID Z Output");
-legend("p","i","d")
-% 
-% 
-figure()
-plot(sent_data)
-title("Commands Sent");
-legend("comm_thr", "comm_phi", "comm_theta")
-% 
-% figure()
-% plot(errors)
-
-figure()
-plot(loopTimes)
-title("Loop time")
-
-figure()
-plot(packetCount)
-
-% Find timeshift (and corresponding time delay) through xcorr (time delay should be 10-15ms (ie. = read() time?))
-[c,lags] = xcorr(euler(:,1),Drone_pos_data(:,1)*(180/pi));
-timeShift = find(c==max(c)) - ITERATIONS; % This number corresponds to how many ms?
-timeShift = 0;
-RMSE_pitch_angle = sqrt(mean((euler(1+timeShift:end,1) - Drone_pos_data(1:end-timeShift,1)*(180/pi)).^2))  % Root Mean Squared Error
-% Plot with timeshift
-figure();
-plot(euler(1+timeShift:end,1));
-hold on;
-plot(Drone_pos_data(1:end-timeShift,1)*(180/pi))
-legend("drone thx-pitch","motive thx-pitch");
+disp('Done')
 
 
-% Find timeshift
-[c,lags] = xcorr(euler(:,2),Drone_pos_data(:,2)*(180/pi));
-timeShift = find(c==max(c)) - ITERATIONS; % This number corresponds to how many ms?
-timeShift = 0;
-RMSE_roll_angle = sqrt(mean((euler(1+timeShift:end,2) - Drone_pos_data(1:end-timeShift,2)*(180/pi)).^2))  % Root Mean Squared Error
-% Plot with timeshift
-figure();   
-plot(euler(1+timeShift:end,2));
-hold on;
-plot(Drone_pos_data(1:end-timeShift,2)*180/pi)
-legend("drone thy-roll","motive thy-roll");
 
 
-pitchRatesFil_motive = lowpass(euler_rates(:,1)*180/pi,0.1);
-pitchRatesFil_drone = lowpass(Drone_rate_data(:,1)*180/pi,0.1);
-figure();
-plot(pitchRatesFil_motive);
-hold on;
-plot(pitchRatesFil_drone)
-legend("drone thx-pitch rate","motive thx-pitch rate");
 
-rollRatesFil_motive = lowpass(euler_rates(:,2)*180/pi,0.1);
-rollRatesFil_drone = lowpass(Drone_rate_data(:,2)*180/pi,0.1);
-figure();
-plot(rollRatesFil_motive);
-hold on;
-plot(rollRatesFil_drone)
-legend("drone thy-roll rate","motive thy-roll rate");
+function saveImuData(src,evt)
+    global data;
+    global timestamp;
+    [data,timestamp] = read(src,'oldest');
+end
+
+
+
 
 
 
