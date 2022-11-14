@@ -4,19 +4,20 @@ clear;
 clc;
 
 %% Load IMU gyro/acc data
-load IMUdata_handheld.mat;
+% load IMUdata_handheld.mat;
+load IMUdata_autonomous4.mat;
 datalength = size(gyrRec,1);
 
 
 %% Filter gains
-kP = 1;
-kI = 0.1;
-kW = 1; % Ki in paper for wMes (keep this 1, tune it last if necessary or just to see what happens)
+kP = 0.6;
+kI = 0.01;  %[0.05 0.01 1];
+kW = 1; %[0.7 0.01 1]; % Ki in paper for wMes (keep this 1, tune it last if necessary or just to see what happens)
 
 %% Parameters
 dt = 1/60;
-radScaleFactor = 1000000;
-% radScaleFactor = 1/1.745329252e-5; % onboard
+% radScaleFactor = 1000000;
+radScaleFactor = 1/1.745329252e-5; % onboard
 %% States
 % Estimated rotation matrices (body to inertial)
 R_hat = [1 0 0;
@@ -45,10 +46,10 @@ for i=1:datalength
         % matrix should maintain det=1
         
         % Update wMes --------- is this not being summed up throughout the entire length of data?
-        wMes = kW*cross(accRec(i,:)/accNorm, v_a_hat); % Not positive if right (diff eq)
+        wMes = kW.*cross(accRec(i,:)/accNorm, v_a_hat); % Not positive if right (diff eq)
         
         % Update bDot
-        biasDot = -kI*wMes;
+        biasDot = -kI.*wMes;
         bias_hat(i+1,:) = bias_hat(i,:) + biasDot*dt;
     
         % Update RhatDot
@@ -92,12 +93,7 @@ title("Roll Comparison")
 legend("Truth","Estimated")
 
 
-disp(mean(Drone_attitude_data(:,1) - eul(:,1)))
-disp(mean(Drone_attitude_data(:,2) - eul(:,2)))
-% Define skew symmetric matrix
-function skewSym=skewSym(vec)
-    skewSym = [0 -vec(3) vec(2);
-               vec(3) 0 -vec(1);
-               -vec(2) vec(1) 0];
-end
+% disp(mean(Drone_attitude_data(:,1) - eul(:,1)*180/pi))
+% disp(mean(Drone_attitude_data(:,2) - eul(:,2)*180/pi))
+
 
