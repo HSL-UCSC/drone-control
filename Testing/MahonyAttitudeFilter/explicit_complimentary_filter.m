@@ -5,7 +5,7 @@ clc;
 
 %% Load IMU gyro/acc data
 % load IMUdata_handheld.mat;
-load IMUdata_autonomous.mat; % 4 is manual override
+load IMUdata_autonomous6.mat; % 4 is manual override
 datalength = size(gyrRec,1);
 
 
@@ -61,14 +61,17 @@ for i=1:datalength
         v_hats(:,i) = v_a_hat;
         v_actual(:,i) = accRec(i,:)'/accNorm;
         error(i) = sqrt((v_hats(1,i)-v_actual(1,i))^2 + (v_hats(2,i)-v_actual(2,i))^2 + (v_hats(3,i)-v_actual(3,i))^2);
-
+    
+%         Hard switching for accel dist rejection
         if(abs(accNorm - 980) > AccThreshold)
             kW = 1;
         else
             kW = 0.5;
         end
-%         kW = 0.5;
-%         kW = exp(-abs(accNorm - 980)*0.1)
+
+        % Soft switching for accel dist rejection
+        kW = 0.5+exp(-abs(accNorm - 980)*0.001);
+%         kW = 0.5/(1+exp(abs(accNorm - 980)*0.001)); % Worse for some reason
 
 %         d = d*c;
 %         d = c*d;
@@ -127,8 +130,8 @@ legend("Truth","Estimated")
 errorRoll = mean(abs(Drone_attitude_data(1:end,2)*180/pi - eul(:,2)*180/pi))
 
 %%
-figure()
-plot(accNormRec)
+% figure()
+% plot(accNormRec-980)
 % plot(accRec(:,1))
 % hold on;
 % plot(accRec(:,2))
