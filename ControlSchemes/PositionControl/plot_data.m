@@ -158,7 +158,7 @@ axis([0 k -2 2])
 % plot(Tyler(:,16))
 
 %% Tracking
-% close all
+close all
 
 
 % figure()
@@ -169,34 +169,31 @@ axis([0 k -2 2])
 % plot(packetCount)
 % title("Packet count")
 % 
-% figure()
-% hold on;
-% % plot(-desired_attitudes(:,1));
-% plot(pwmSignals(:,1))
-% plot(Drone_pos_data(:,1)*180/pi)
-% plot(ahrsRec(:,1))
-% title("Pitch tracking")
-% legend("Commanded","MOCAP","AHRS")
-% 
-% figure()
-% hold on;
-% % plot(desired_attitudes(:,2));
-% plot(pwmSignals(:,2))
-% plot(Drone_pos_data(:,2)*180/pi)
-% plot(ahrsRec(:,2))
-% title("Roll tracking")
-% 
-% legend("Commanded","MOCAP","AHRS")
-
-
-
-% figure()
+figure()
 hold on;
+plot(Drone_attitude_data(:,1)*180/pi)
+plot(ahrsRec(:,1))
+plot(ahrsRec2(:,1))
+title("Pitch tracking")
+legend("MOCAP","My AHRS","ST AHRS")
+
+figure()
+hold on;
+plot(Drone_attitude_data(:,2)*180/pi)
+plot(ahrsRec(:,2))
+plot(ahrsRec2(:,2))
+title("Roll tracking")
+legend("MOCAP","My AHRS","ST AHRS")
+
+
+
+% figure()
+% hold on;
 % plot(Drone_pos_data(1:end-1,1)*180/pi - ahrsRec(:,1))
 % title("Pitch estimation error")
 
 % figure()
-plot(Drone_pos_data(1:end-1,2)*180/pi - ahrsRec(:,2))
-title("Roll estimation error")
+% plot(Drone_pos_data(1:end-1,2)*180/pi - ahrsRec(:,2))
+% title("Roll estimation error")
 
 

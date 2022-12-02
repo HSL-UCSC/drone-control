@@ -70,7 +70,7 @@ for i=1:datalength
         end
 
         % Soft switching for accel dist rejection
-        kW = 0.5+exp(-abs(accNorm - 980)*0.001);
+        kW = 0.5+exp(-abs(accNorm - 980)*0.001); % exp=2.718
 %         kW = 0.5/(1+exp(abs(accNorm - 980)*0.001)); % Worse for some reason
 
 %         d = d*c;
