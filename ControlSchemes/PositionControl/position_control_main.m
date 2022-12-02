@@ -217,16 +217,20 @@ k = 1;
 dT = 1/60; % 55Hz (writing only) - look into if dT might be faster 
 
 [prevDronePos] = mocapHandle.GetDronePosition();
-Drone_pos_data = [];
+Drone_attitude_data = [];
 Drone_rate_data = [];
 packetCount = [];
 ahrsRec = [];
+ahrsRec2 = [];
 eulerCmdRec = [];
 thrusts = [];
-
+accRec = [];
+gyrRec = [];
 xRefs = [];
 yRefs = [];
 zRefs = [];
+Rhat = [];
+
 
 
 
@@ -248,7 +252,7 @@ while(1)
     getPosTimes(k) = toc(startTPos);    
     Drone_data(k+1, :) = DronePos;
     
-    Drone_pos_data(k,:) = DronePos(5:7);
+    Drone_attitude_data(k,:) = DronePos(5:7);
     Drone_rate_data(k,:) = (DronePos(5:7) - prevDronePos(5:7))/dT;
     prevDronePos = DronePos;
     
@@ -388,24 +392,49 @@ while(1)
 %     rTimes(k) = toc(rTime);
 %      rec(k,:)=data(1,:);
     
-     % Store on-board attitude estimate
+%      Store on-board attitude estimate
      ahrsX = commsHandle.parseBLE(data(1, 3:4),10);%1
      ahrsY = commsHandle.parseBLE(data(1, 5:6),10);
      ahrsZ = commsHandle.parseBLE(data(1, 7:8),10);
      ahrsRec(k,:) = [ahrsX, ahrsY, ahrsZ]; % AHRS
 
 %      % Store on-board attitude rates
-%      pwm1 = commsHandle.parseBLE(data(1,9:10),1);%100
-%      pwm2 = commsHandle.parseBLE(data(1,11:12),1);
-%      pwm3 = commsHandle.parseBLE(data(1,13:14),1);
-%      pwm4 = commsHandle.parseBLE(data(1,19:20),1);
-%      pwmSignals(k,:) = [pwm1,pwm2,pwm3,pwm4]; % Commanded
+     ahrsX = commsHandle.parseBLE(data(1,9:10),10);%100
+     ahrsY = commsHandle.parseBLE(data(1,11:12),10);
+     ahrsZ = commsHandle.parseBLE(data(1,13:14),10);
+     ahrsRec2(k,:) = [ahrsX, ahrsY, ahrsZ]; % AHRS
 
-     % Store on-board attitude commands
-     attCmdX = commsHandle.parseBLE(data(1,9:10),10);%100
-     attCmdY = commsHandle.parseBLE(data(1,11:12),10);
-     attCmdZ = commsHandle.parseBLE(data(1,13:14),10);
-     eulerCmdRec(k,:) = [attCmdX,attCmdY,attCmdZ]; % Commanded
+%      % Store on-board attitude commands
+%      attCmdX = commsHandle.parseBLE(data(1,9:10),10);%100
+%      attCmdY = commsHandle.parseBLE(data(1,11:12),10);
+%      attCmdZ = commsHandle.parseBLE(data(1,13:14),10);
+%      eulerCmdRec(k,:) = [attCmdX,attCmdY,attCmdZ]; % Commanded
+
+%      % Store on-board attitude estimate
+%      accX = commsHandle.parseBLE(data(1, 3:4),1);%1
+%      accY = commsHandle.parseBLE(data(1, 5:6),1);
+%      accZ = commsHandle.parseBLE(data(1, 7:8),1);
+%      accRec(k,:) = [accX, accY, accZ]; % AHRS
+%     
+%      % Store on-board attitude estimate
+%      gyrX = commsHandle.parseBLE(data(1, 9:10),1);%1
+%      gyrY = commsHandle.parseBLE(data(1, 11:12),1);
+%      gyrZ = commsHandle.parseBLE(data(1, 13:14),1);
+%      gyrRec(k,:) = [gyrX, gyrY, gyrZ]; % AHRS
+
+     % Store Rhat estimates
+%      R11 = commsHandle.parseBLE(data(1, 3:4),10);%1
+%      R12 = commsHandle.parseBLE(data(1, 5:6),10);
+%      R13 = commsHandle.parseBLE(data(1, 7:8),10);    
+%      R21 = commsHandle.parseBLE(data(1, 9:10),10);%1
+%      R22 = commsHandle.parseBLE(data(1, 11:12),10);
+%      R23 = commsHandle.parseBLE(data(1, 13:14),10);
+%      R31 = commsHandle.parseBLE(data(1, 15:16),10);%1
+%      R32 = commsHandle.parseBLE(data(1, 17:18),10);
+%      R33 = commsHandle.parseBLE(data(1, 19:20),10);
+%      Rhat(:,:,k) = [R11 R12 R13;
+%                     R21 R22 R23;
+%                     R31 R32 R33]; % AHRS
 
 
      % Store on-board packet count
@@ -417,7 +446,7 @@ while(1)
 
 
     % Tylers data
-%     Tyler(k,:) = [x_f,y_f,z_f,vx_f,vy_f,vz_f,Drone_pos_data(k,1),Drone_pos_data(k,2),Drone_pos_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
+%     Tyler(k,:) = [x_f,y_f,z_f,vx_f,vy_f,vz_f,Drone_attitude_data(k,1),Drone_attitude_data(k,2),Drone_attitude_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
     
     
     % Collect the data being sent
@@ -427,16 +456,16 @@ while(1)
     desired_attitudes(k, :) = [theta_d, phi_d];
     
     % Memshare data
-    memShareT = tic;
-    memMap.Data(1) = ahrsRec(k,1); % AHRS
-    memMap.Data(2) = Drone_pos_data(k,1)*180/pi;  
-    memShareTimes(k) = toc(memShareT);
+%     memShareT = tic;
+%     memMap.Data(1) = ahrsRec(k,1); % AHRS
+%     memMap.Data(2) = Drone_attitude_data(k,1)*180/pi;  
+%     memShareTimes(k) = toc(memShareT);
 
 
     % Sleep delay 
     s = tic;
 %     java.lang.Thread.sleep(5); % 5ms delay
-    pause(0.005)
+    pause(0.01) %0.005
     sleepTimes(k) = toc(s);
 
 

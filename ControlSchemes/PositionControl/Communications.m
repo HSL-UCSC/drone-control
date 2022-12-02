@@ -24,7 +24,7 @@ classdef Communications < handle
 
 
         function [out] = parseBLE(obj, data, scale) % Scale is for decimal precision (choose what was chosen at the firmware level)
-            if(data(2) < 10)
+            if(data(2) < 128)
                 out = (256*data(2) + data(1))/scale;
             else
                 out = -((256*(255 - data(2)) + (256-data(1))))/scale;
