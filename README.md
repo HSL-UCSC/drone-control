@@ -19,7 +19,7 @@ An interface for ST Microelectronics STEVAL-FCU001V1 drone.
 
 ## Xbox Control
 <!-- ![alt text](https://github.com/[username]/[reponame]/blob/[branch]/image.jpg?raw=true) -->
-![alt text](https://lh5.googleusercontent.com/c_s6gWkZE4vTnXfTnp-CAOfSTYxI7504XkgfkIVYkGM8sqxYDNG7A41X8BN8_20mscI=w2400)
+![alt text](https://lh5.googleusercontent.com/ak9S9LqvmSyjND_QmrkH7fyYmUmcYyIqQMQegmAeDIY7XEuUXGje9xpXwXxIrt8zcgc=w2400)
 
 .. Picture of xbox controller and highlight buttons in red and label with numbers. Create a legend to explain what each button does.
 .. 
