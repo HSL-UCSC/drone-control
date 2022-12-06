@@ -8,25 +8,18 @@ An interface for ST Microelectronics STEVAL-FCU001V1 drone.
 * Real-time data tx/rx
 * Mechanism to switch between various controllers/estimators both on and off-board (not yet implemented)
 
-## Quadrotor Setup
-.. Steps to put together the drone - Frame, motors, battery holder stick to bottom with long direction pointing with arrow. HC12 goes on with rubber bands
-.. Board alignment
-.. 
-
 ## Base Station Setup
-.. HC12 PCB
 .. Motive, link to directions on setting up motive
+.. HC12 PCB
 
 ## Xbox Control
-<!-- ![alt text](https://github.com/[username]/[reponame]/blob/[branch]/image.jpg?raw=true) -->
 ![alt text](https://lh5.googleusercontent.com/ak9S9LqvmSyjND_QmrkH7fyYmUmcYyIqQMQegmAeDIY7XEuUXGje9xpXwXxIrt8zcgc=w2400)
-
-.. Picture of xbox controller and highlight buttons in red and label with numbers. Create a legend to explain what each button does.
-.. 
+.. Explain the various features
 
 ## Real Time Data Transfer
 .. BLE callback and the scale factor
+.. HC12 for attitude commands and data update requests
 
 ## Running Experiments
-.. 
+.. position_control_main.m
 
