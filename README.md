@@ -9,8 +9,8 @@ An interface for ST Microelectronics STEVAL-FCU001V1 drone.
 * Mechanism to switch between various controllers/estimators both on and off-board (not yet implemented)
 
 ## Base Station Setup
-.. Motive, link to directions on setting up motive
-.. HC12 PCB
+#### Optitrack
+#### HC12 PCB
 
 ## Xbox Control
 ![alt text](https://lh5.googleusercontent.com/ak9S9LqvmSyjND_QmrkH7fyYmUmcYyIqQMQegmAeDIY7XEuUXGje9xpXwXxIrt8zcgc=w2400)
