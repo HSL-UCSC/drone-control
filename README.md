@@ -14,7 +14,7 @@ An interface for ST Microelectronics STEVAL-FCU001V1 drone.
 2) Once Motive has been setup to stream data to the base station, you will need to download the [NatNetSDK](https://optitrack.com/software/natnet-sdk/) from Optitrack's website. Our Matlab script can then load the library required to interface with Motive's data stream. When initializing MocapAPI class, provide a correct file path to the NatNetSDK. 
 
 #### HC12
-<img align="right" src="https://imgaz.staticbg.com/thumb/large/oaupload/banggood/images/2B/84/c2010326-344d-4513-98cd-879ea4f7ab16.jpg" alt="drawing" width="200"/><!-- 
+<img align="right" src="https://imgaz.staticbg.com/thumb/large/oaupload/banggood/images/2B/84/c2010326-344d-4513-98cd-879ea4f7ab16.jpg" alt="drawing" width="300"/><!-- 
 ![alt text](https://imgaz.staticbg.com/thumb/large/oaupload/banggood/images/2B/84/c2010326-344d-4513-98cd-879ea4f7ab16.jpg) -->
 
 
