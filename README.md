@@ -9,12 +9,12 @@ An interface for ST Microelectronics STEVAL-FCU001V1 drone.
 * Mechanism to switch between various controllers/estimators both on and off-board (not yet implemented)
 
 ## Base Station Setup
-#### Optitrack Setup
+#### Optitrack
 1) Launch Motive, and follow the video tutorial found [here](https://drive.google.com/file/d/18uIZ4nmRBpClOAIvb6bXcjtSB3jgUkA6/view) in order to calibrate, create a rigid body, and stream pose data.
 2) Once Motive has been setup to stream data to the base station, you will need to download the [NatNetSDK](https://optitrack.com/software/natnet-sdk/) from Optitrack's website. Our Matlab script can then load the library required to interface with Motive's data stream. When initializing MocapAPI class, provide a correct file path to the NatNetSDK. 
 
-#### HC12 Setup
-<img style="float: right;" src="https://imgaz.staticbg.com/thumb/large/oaupload/banggood/images/2B/84/c2010326-344d-4513-98cd-879ea4f7ab16.jpg" alt="drawing" width="200"/><!-- 
+#### HC12
+<img align="right" src="https://imgaz.staticbg.com/thumb/large/oaupload/banggood/images/2B/84/c2010326-344d-4513-98cd-879ea4f7ab16.jpg" alt="drawing" width="200"/><!-- 
 ![alt text](https://imgaz.staticbg.com/thumb/large/oaupload/banggood/images/2B/84/c2010326-344d-4513-98cd-879ea4f7ab16.jpg) -->
 
 
@@ -31,7 +31,7 @@ Once two HC12 modules have been configured identically, connect one to the base 
 
 Run the ... to verify communication works (MAKE MY OWN SCRIPT TO CHECK RADIO COMMS)
 
-#### BLE Setup
+#### Bluetooth Low Energy (BLE)
 While the HC12 handles consistently fast communication from the base station to the drone, a Bluetooth module is required to receive data being sent from the drone to the base station. 
 
 .. can check the bluetooth mac adress via iphone app (OR I CAN MAKE MY OWN SCRIPT TO CHECK FOR THEM)
