@@ -32,9 +32,8 @@ Once two HC12 modules have been configured identically, connect one to the base 
 Run the ... to verify communication works (MAKE MY OWN SCRIPT TO CHECK RADIO COMMS)
 
 #### Bluetooth Low Energy (BLE)
-While the HC12 handles consistently fast communication from the base station to the drone, a Bluetooth module is required to receive data being sent from the drone to the base station. 
+While the HC12 handles consistently fast communication from the base station to the drone, a Bluetooth module is required to receive data being sent from the drone to the base station. This is useful for fetching data from the drone in real time which is necessary in many situations. In order to start receiving data, you need to check the MAC address of the flight control unit and use this to create a BLE class object. You can then use Matlab's BLE read callback in order to receive data as it is sent during a flight.
 
-.. can check the bluetooth mac adress via iphone app (OR I CAN MAKE MY OWN SCRIPT TO CHECK FOR THEM)
 
 ## Xbox Control
 An Xbox controller was introduced to this project in order to 1) act as a form of manual override, and 2) enable the quadrotor to be controlled in unconventional ways such as by switching between positional setpoints, or even control position/velocity with the joystick itself. This extends the capabilities of the ST drone past the original intentions of just controlling attitude with a phone app. The current Xbox control configuration is provided in the figure below, however, thease features can be changed or built upon in order to meet your own experiment requirements.
@@ -42,8 +41,29 @@ An Xbox controller was introduced to this project in order to 1) act as a form o
 ![alt text](https://lh5.googleusercontent.com/ak9S9LqvmSyjND_QmrkH7fyYmUmcYyIqQMQegmAeDIY7XEuUXGje9xpXwXxIrt8zcgc=w2400)
 
 ## Real Time Data Transfer
-.. BLE callback and the scale factor
-.. HC12 for attitude commands and data update requests
+This interface is designed to allow for real time communication to/from the drone. The HC12 acts as the channel for communication from the base station to the drone, and the Bluetooth module is the channel from drone to base station. This section will touch on some of the details of both channels.
+
+#### Drone -> Base Station
+Bluetooth sends information over what is known as a "characteristic". There a three bluetooth characteristics that transfer data off of the drone. One characteristic sends battery level information, another sends pressure sensor data, and the third sends 20 bytes of IMU data. This is the characteristic with the largest capacity of data to send, which is why we chose to listen to data coming over this channel. It may be possible to create another characteristic onboard to send over as much data as we'd like, however, this process seems complicated, so we've decided to simply swap out IMU data for any data we want to send.
+
+Another caveat to sending data over this bluetooth characteristic is that we can only send two bytes worth of data in integer form. This means that if we want to preserve floating point information, we need to scale the integer we send by an appropriate factor. This also requires us to know in advance at the base station what that scale factor is so that we can extract the correct floating point information from the integer. This is handled in the parseBLE() function. 
+
+#### Drone <- Base Station
+The HC12 handles sending both attitude commands and what we call "data update requests" to the drone. Each of these tranmissions will follow a specific packet protocol in order for the drone to understand what to do with the information. Data update requests allow us to command the drone to do things like arm itself, switch mode controls, or even dynamically tune gains. The structure is setup in an easily expandable way such that we can tell the drone to do whatever we want with internal memory, rather than only able to send attitude commands. This packet structure is provided in the table below:
+
+| Packet  | Description |
+| ------------- | ------------- |
+| [_startByte_, yawCmd, thrustCmd, rollCmd, pitchCmd, _endByte_]  | An attitude command  |
+| [_startByte_, _startByteDR_, _endByteDR_, dictKey, value, _endByte_]  | A data update request, where dictKey acts as the indicator of what to do, and value is a value associated with that task  |
+
+\
+While the table above provides the general packet structure, the next table describes  current data update request capabilities of our drone firmware.
+
+| Data Update Request  | Description |
+| ------------- | ------------- |
+| [_startByte_, _startByteDR_, _endByteDR_, 1, x, _endByte_]  | Arm the drone if x=1, disarm if x=0  |
+| [_startByte_, _startByteDR_, _endByteDR_, 2, x, _endByte_]  | Calibrate if x=1  |
+| [_startByte_, _startByteDR_, _endByteDR_, 3, x, _endByte_]  | Switch onboard control mode to x: AOMC=0, MOMC=1, EOMC=2  |
 
 ## Running Experiments
 .. position_control_main.m
