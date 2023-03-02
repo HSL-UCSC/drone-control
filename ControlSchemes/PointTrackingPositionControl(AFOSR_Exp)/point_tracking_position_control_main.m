@@ -241,6 +241,13 @@ controlMode = 0;
 landingFlag = 0;
 
 
+% POINT TRACKING
+epsilon = 0.2; % 0.2 radial error for tracking
+timeEpsilon = 3; % 3 seconds of being under 0.2 radial distance from point
+pointTrackTimer = 0;
+firstLoop = true;
+secondLoop = false;
+
 global data;
 global timestamp;
 data = zeros(1,20); % For reading IMU
@@ -285,18 +292,33 @@ while(1)
     dT = loopTimes(k);
     startT = tic;
     
-    % Trajectory decision while flying
-    if(TRAJECTORY == 0)
-        % Circular trajectory
-        x_ref = 0.5*cos(0.01*k);
-        y_ref = 0.5*sin(0.01*k);
-    else
-        % Position hover trajectory
-        [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
-    end
 
-    % Landing condition
-    if(landingFlag)
+
+    % Position point tracking - Check if current position has been less
+    % than epsilon away from reference for >= 3seconds
+    [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
+    radialError = sqrt((x_ref - x_f)^2 + (y_ref - y_f)^2 + (z_ref - z_f)^2);
+
+    [radialError, pointTrackTimer] % Print out timer and error
+    if(~landingFlag)
+        if(radialError <= epsilon)
+            % Start timer
+            pointTrackTimer = pointTrackTimer + dT;
+            if(pointTrackTimer >= timeEpsilon) % >= 3 seconds
+                waypointsHandle.nextWaypoint();
+                [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
+                pointTrackTimer = 0;
+                fprintf('Setpoint change: [%.2f,%.2f,%.2f]\n', x_ref,y_ref,z_ref);
+    
+                if(x_ref==0 && y_ref == 0 && z_ref == 0)
+                    landingFlag = 1;
+                end
+            end
+        else
+            pointTrackTimer = 0;
+        end
+    else
+        % Landing condition
         x_ref = 0;
         y_ref = 0;
         z_ref = z_f - 0.10;
@@ -432,9 +454,8 @@ while(1)
 
     % Sleep delay 
     s = tic;
-% %     java.lang.Thread.sleep(5); % 5ms delay
-    pause(0.005)
-
+%     java.lang.Thread.sleep(5); % 5ms delay
+    pause(0.01)
     sleepTimes(k) = toc(s);
 
 

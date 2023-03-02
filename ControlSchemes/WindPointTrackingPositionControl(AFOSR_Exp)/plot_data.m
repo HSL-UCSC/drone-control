@@ -3,8 +3,7 @@ close all
 
 % Time
 figure()
-plot3(FullState(:,5),FullState(:,6),FullState(:,7))
-grid on;
+plot(FullState(:,1) - FullState(1,1))
 
 % Position
 figure()

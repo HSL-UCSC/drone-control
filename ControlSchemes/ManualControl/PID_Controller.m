@@ -87,7 +87,7 @@ classdef PID_Controller
             
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
-            K_p = 300; % 200
+            K_p = 250; % 200
             K_i = 30; 
             K_d = 120; % 200,30,120 good
             

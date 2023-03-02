@@ -37,7 +37,7 @@ classdef MocapAPI < handle
             %Get the marker data
             drone_pos = frameData.RigidBodies(obj.drone_id);
             
-%             ball_pos = frameData.OtherMarkers(obj.drone_id)
+            %ball_pos = frameData.OtherMarkers(id);
             if length(drone_pos) > 0
                 
                 %% Motive coordiate frame

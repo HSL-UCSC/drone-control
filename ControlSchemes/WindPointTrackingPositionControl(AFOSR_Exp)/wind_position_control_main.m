@@ -241,6 +241,13 @@ controlMode = 0;
 landingFlag = 0;
 
 
+% POINT TRACKING
+epsilon = 0.2; % 0.2 radial error for tracking
+timeEpsilon = 3; % 3 seconds of being under 0.2 radial distance from point
+pointTrackTimer = 0;
+firstLoop = true;
+secondLoop = false;
+
 global data;
 global timestamp;
 data = zeros(1,20); % For reading IMU
@@ -285,18 +292,11 @@ while(1)
     dT = loopTimes(k);
     startT = tic;
     
-    % Trajectory decision while flying
-    if(TRAJECTORY == 0)
-        % Circular trajectory
-        x_ref = 0.5*cos(0.01*k);
-        y_ref = 0.5*sin(0.01*k);
-    else
-        % Position hover trajectory
-        [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
-    end
 
-    % Landing condition
-    if(landingFlag)
+
+    % Position point tracking
+     if(landingFlag)
+        % Landing condition
         x_ref = 0;
         y_ref = 0;
         z_ref = z_f - 0.10;
@@ -305,7 +305,9 @@ while(1)
             disp("Landed")
             break;
         end
-    end
+     else
+         [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
+     end
 
 
     % Store the refs
@@ -416,7 +418,11 @@ while(1)
     totalTime = totalTime + dT;
     FullState(k,:) = [totalTime, x_ref,y_ref,z_ref,x_f,y_f,z_f,vx_f,vy_f,vz_f,phi_d,theta_d,psi_d,ahrsX,ahrsY,ahrsZ,Drone_attitude_data(k,1),Drone_attitude_data(k,2),Drone_attitude_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
     
-    
+    % Stay in wind for 20 seconds then land
+    if(totalTime > 15)
+        landingFlag = 1;
+    end
+
     % Collect the data being sent
     errors(k) = Y_pid.y_curr_error;
     sent_data(k, :) = [comm_thr_d, comm_phi_d, comm_theta_d];
@@ -432,9 +438,8 @@ while(1)
 
     % Sleep delay 
     s = tic;
-% %     java.lang.Thread.sleep(5); % 5ms delay
-    pause(0.005)
-
+%     java.lang.Thread.sleep(5); % 5ms delay
+    pause(0.01)
     sleepTimes(k) = toc(s);
 
 

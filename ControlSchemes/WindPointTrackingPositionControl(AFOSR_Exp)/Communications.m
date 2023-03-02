@@ -33,7 +33,7 @@ classdef Communications < handle
 
         function packet = sendAttitudeCmdPacket(obj,device,yaw,thrust,roll,pitch)
             % Build attitude command packet
-            packet = [obj.startByte, yaw, thrust, roll, pitch, obj.endByte]
+            packet = [obj.startByte, yaw, thrust, roll, pitch, obj.endByte];
             write(device,packet,"uint8") 
         end
 
@@ -41,12 +41,6 @@ classdef Communications < handle
             % Build attitude command packet
             packet = [obj.startByte, obj.startByte_DataUpdate, obj.endByte_DataUpdate, index, value, obj.endByte];
             write(device,packet,"uint8")
-        end
-
-        function packet = sendDummyPacket(obj,device)
-            % Build attitude command packet
-            packet = [1, 1, 1, 1, 1, 1];
-            write(device,packet,"uint8") 
         end
         
     end

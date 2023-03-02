@@ -42,12 +42,6 @@ classdef Communications < handle
             packet = [obj.startByte, obj.startByte_DataUpdate, obj.endByte_DataUpdate, index, value, obj.endByte];
             write(device,packet,"uint8")
         end
-
-        function packet = sendDummyPacket(obj,device)
-            % Build attitude command packet
-            packet = [1, 1, 1, 1, 1, 1];
-            write(device,packet,"uint8") 
-        end
         
     end
 end

@@ -1,8 +1,7 @@
 %% Plot Full State
 close all
 
-% Time
-figure()
+% 3D Position
 plot3(FullState(:,5),FullState(:,6),FullState(:,7))
 grid on;
 
