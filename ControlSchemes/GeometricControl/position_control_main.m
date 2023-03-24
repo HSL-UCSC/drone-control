@@ -118,7 +118,8 @@ CUT_OFF_FREQ_POS = 10;
 
 %% Mass of the drone
 m = 69.89/1000;
-MAX_ANGLE = 30.0;% 27.73;
+MAX_ANGLE = 30.0;
+MAX_R_ELEMENT = 1;
 
 %% Inititalize the PID controllers
 X_pid = PID_Controller.Xpid_init(1, OUT_FREQ, CUT_OFF_FREQ_VEL);
@@ -329,14 +330,33 @@ while(1)
     phi_d = -m/single(comm_thr_d) * (ddot_x_d*cos(psi) + ddot_y_d*sin(psi))* 180/pi; % MIGHT NEED TO REPLACE comm_thr_d with actual thrust sent to actuators on drone
     theta_d = m/single(comm_thr_d) * (-ddot_y_d*cos(psi) + ddot_x_d*sin(psi)) * 180/pi;
     
+    %%%% ^^^^ FLIP THETA_D BY ADDING A NEGATIVE IN FRONT LIKE PHI_D ^^^^ %%%%
+
+    % Apply trim condition
+    phi_d = phi_d + roll_trim;
+    theta_d = theta_d + pitch_trim;
+
     % Cap angles
     phi_d = min(max(-MAX_ANGLE, phi_d), MAX_ANGLE);
     theta_d = min(max(-MAX_ANGLE, theta_d), MAX_ANGLE);
+
+    % Generate desired R and Omega
+    % Transform euler cmd into R_d,Omega_d commands
+    comm_R_d = eul2rotm([phi_d*pi/180, theta_d*pi/180, 0.0],'xyz');
+    Desired_skew_parameters = logm(comm_R_d); %Log of 3x3 gives us the skew symmetric version
+    desrired_parameters = so3_hatinv(Desired_skew_parameters); % THIS IS JUST DESIRED ATTITUDE ANGLE?
+    if(k == 1)
+        desrired_parameters_old = desrired_parameters;
+    end
+    comm_Omega_d = (desrired_parameters - desrired_parameters_old)./dT; % THIS IS DESIRED ATTITUDE RATE?
+    desrired_parameters_old = desrired_parameters;
+%     Omega_d
     
-    % Convert the angles to 0 - 255
-    slope_m = 255.0/(MAX_ANGLE - -MAX_ANGLE);
-    comm_phi_d = uint8(slope_m *(phi_d + MAX_ANGLE)) + roll_trim;
-    comm_theta_d = uint8(slope_m *(theta_d + MAX_ANGLE)) + pitch_trim;
+
+
+
+
+
     
     % Get latest xbox controller input
     xboxTime = tic;
@@ -344,6 +364,22 @@ while(1)
     [xbox_comm_thrust,xbox_comm_yaw,xbox_comm_pitch,xbox_comm_roll,calibrate,arm,override,land, ...
         setpointMode,setpointPrev,setpointNext] = xboxControllerHandle.getState();
     xboxTimes(k) = toc(xboxTime);
+
+    [xbox_comm_thrust,xbox_comm_yaw,xbox_comm_pitch,xbox_comm_roll]
+
+    
+    % Generate desired R and Omega
+    % Transform euler cmd into R_d,Omega_d commands
+    xbox_comm_R_d = eul2rotm([xbox_comm_roll*pi/180, xbox_comm_pitch*pi/180, xbox_comm_yaw*pi/180],'xyz');
+    Desired_skew_parameters = logm(xbox_comm_R_d); %Log of 3x3 gives us the skew symmetric version
+    desrired_parameters = so3_hatinv(Desired_skew_parameters); % THIS IS JUST DESIRED ATTITUDE ANGLE?
+    if(k == 1)
+        desrired_parameters_old = desrired_parameters;
+    end
+    xbox_comm_Omega_d = (desrired_parameters - desrired_parameters_old)./dT; % THIS IS DESIRED ATTITUDE RATE?
+    desrired_parameters_old = desrired_parameters;
+%     Omega_d
+
 
     % Send updates/commands to the Drone
     wTime = tic;
@@ -378,12 +414,14 @@ while(1)
         fprintf('Setpoint change: [%.2f,%.2f,%.2f]\n', x_ref,y_ref,z_ref);
     end
 
+       
+
 
     % Send attitude command
     if(controlMode == 1)
-        commsHandle.sendAttitudeCmdPacket(device,xbox_comm_yaw,xbox_comm_thrust,xbox_comm_roll,xbox_comm_pitch);
+        commsHandle.sendGeometricAttitudeCmdPacket(device, xbox_comm_thrust, xbox_comm_R_d, xbox_comm_Omega_d);
     else
-        commsHandle.sendAttitudeCmdPacket(device,comm_yaw_d,comm_thr_d,comm_phi_d,comm_theta_d);
+        commsHandle.sendGeometricAttitudeCmdPacket(device, comm_thr_d, comm_R_d, comm_Omega_d);
     end
     wTimes(k) = toc(wTime);
     
@@ -427,7 +465,7 @@ while(1)
     
     % Collect the data being sent
     errors(k) = Y_pid.y_curr_error;
-    sent_data(k, :) = [comm_thr_d, comm_phi_d, comm_theta_d];
+%     sent_data(k, :) = [comm_thr_d, comm_phi_d, comm_theta_d];
     cont_actual_data(k, :) = [pid_output_x, pid_output_y, pid_output_z];
     desired_attitudes(k, :) = [theta_d, phi_d];
 
