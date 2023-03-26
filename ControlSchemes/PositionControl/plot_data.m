@@ -1,10 +1,20 @@
 %% Plot Full State
 close all
 
-% Time
+%% 3D
 figure()
 plot3(FullState(:,5),FullState(:,6),FullState(:,7))
 grid on;
+axis equal
+% hold on;
+% for i=1:size(FullState,1)
+%     plot3(FullState(1:i,5),FullState(1:i,6),FullState(1:i,7))
+%     axis([0 0.5 0 1.0 0 1.0 ])
+%     pause(0.01)
+% end
+
+
+%%
 
 % Position
 figure()
@@ -76,3 +86,12 @@ figure()
 plot(packetCount)
 title("Packet Count")
 
+figure()
+plot(error_code)
+title("OE / PE")
+
+figure()
+hold on;
+plot(torques(:,1))
+plot(torques(:,2))
+title("Torques")

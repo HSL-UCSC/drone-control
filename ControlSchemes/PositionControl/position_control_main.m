@@ -414,10 +414,10 @@ while(1)
      % Errir flag
      error_code(k) = commsHandle.parseBLE(data(1,19:20),1);
 
-%      t1 = commsHandle.parseBLE(data(1,15:16),1);
-%      t2 = commsHandle.parseBLE(data(1,17:18),1); 
-%      t3 = commsHandle.parseBLE(data(1,19:20),1);
-%      torques(k,:) =  [t1, t2, t3];
+     t1 = commsHandle.parseBLE(data(1,15:16),1);
+     t2 = commsHandle.parseBLE(data(1,17:18),1); 
+     t3 = commsHandle.parseBLE(data(1,19:20),1);
+     torques(k,:) =  [t1, t2, t3];
 
      
     % Tylers data % --- (now - initTime)*100000

@@ -328,7 +328,7 @@ while(1)
     % Calculate desired roll,pitch angles - From Harsh Report
     psi = DronePos(7); % yaw
     phi_d = -m/single(comm_thr_d) * (ddot_x_d*cos(psi) + ddot_y_d*sin(psi))* 180/pi; % MIGHT NEED TO REPLACE comm_thr_d with actual thrust sent to actuators on drone
-    theta_d = m/single(comm_thr_d) * (-ddot_y_d*cos(psi) + ddot_x_d*sin(psi)) * 180/pi;
+    theta_d = -m/single(comm_thr_d) * (-ddot_y_d*cos(psi) + ddot_x_d*sin(psi)) * 180/pi;
     
     %%%% ^^^^ FLIP THETA_D BY ADDING A NEGATIVE IN FRONT LIKE PHI_D ^^^^ %%%%
 
@@ -342,14 +342,14 @@ while(1)
 
     % Generate desired R and Omega
     % Transform euler cmd into R_d,Omega_d commands
-    comm_R_d = eul2rotm([phi_d*pi/180, theta_d*pi/180, 0.0],'xyz');
-    Desired_skew_parameters = logm(comm_R_d); %Log of 3x3 gives us the skew symmetric version
-    desrired_parameters = so3_hatinv(Desired_skew_parameters); % THIS IS JUST DESIRED ATTITUDE ANGLE?
+    comm_R_d = eul2rotm([theta_d*pi/180, phi_d*pi/180, 0.0],'xyz');
+    aut_Desired_skew_parameters = logm(comm_R_d); %Log of 3x3 gives us the skew symmetric version
+    aut_desrired_parameters = so3_hatinv(aut_Desired_skew_parameters); % THIS IS JUST DESIRED ATTITUDE ANGLE?
     if(k == 1)
-        desrired_parameters_old = desrired_parameters;
+        aut_desrired_parameters_old = aut_desrired_parameters;
     end
-    comm_Omega_d = (desrired_parameters - desrired_parameters_old)./dT; % THIS IS DESIRED ATTITUDE RATE?
-    desrired_parameters_old = desrired_parameters;
+    comm_Omega_d = (aut_desrired_parameters - aut_desrired_parameters_old)./dT; % THIS IS DESIRED ATTITUDE RATE?
+    aut_desrired_parameters_old = aut_desrired_parameters;
 %     Omega_d
     
 
@@ -370,7 +370,7 @@ while(1)
     
     % Generate desired R and Omega
     % Transform euler cmd into R_d,Omega_d commands
-    xbox_comm_R_d = eul2rotm([xbox_comm_roll*pi/180, xbox_comm_pitch*pi/180, xbox_comm_yaw*pi/180],'xyz');
+    xbox_comm_R_d = eul2rotm([xbox_comm_pitch*pi/180, xbox_comm_roll*pi/180, xbox_comm_yaw*pi/180],'xyz');
     Desired_skew_parameters = logm(xbox_comm_R_d); %Log of 3x3 gives us the skew symmetric version
     desrired_parameters = so3_hatinv(Desired_skew_parameters); % THIS IS JUST DESIRED ATTITUDE ANGLE?
     if(k == 1)
@@ -378,7 +378,7 @@ while(1)
     end
     xbox_comm_Omega_d = (desrired_parameters - desrired_parameters_old)./dT; % THIS IS DESIRED ATTITUDE RATE?
     desrired_parameters_old = desrired_parameters;
-%     Omega_d
+    xbox_comm_Omega_d
 
 
     % Send updates/commands to the Drone
@@ -415,8 +415,8 @@ while(1)
     end
 
        
-
-
+    xbox_comm_R_d = eye(3);
+    xbox_comm_Omega_d = [0 0 0];
     % Send attitude command
     if(controlMode == 1)
         commsHandle.sendGeometricAttitudeCmdPacket(device, xbox_comm_thrust, xbox_comm_R_d, xbox_comm_Omega_d);
@@ -448,14 +448,33 @@ while(1)
 
      % Store packet count
      packetCount(k,:) = data(1,17:18);
+%      packetCount(k,:) = data(1,11:12);
 
      % Errir flag
      error_code(k) = commsHandle.parseBLE(data(1,19:20),1);
+     error_code(k) = commsHandle.parseBLE(data(1,13:14),1);
+    
+     thrust = commsHandle.parseBLE(data(1, 19:20),1);
+     t1 = commsHandle.parseBLE(data(1,3:4),1);
+     t2 = commsHandle.parseBLE(data(1,5:6),1); 
+     t3 = commsHandle.parseBLE(data(1,7:8),1);
+     torques(k,:) =  [t1, t2, t3, thrust];
 
-%      t1 = commsHandle.parseBLE(data(1,15:16),1);
-%      t2 = commsHandle.parseBLE(data(1,17:18),1); 
-%      t3 = commsHandle.parseBLE(data(1,19:20),1);
-%      torques(k,:) =  [t1, t2, t3];
+%     Rreceived = [];
+%     Rreceived(1,1) = commsHandle.parseBLE(data(1, 3:4),1000);%1
+%     Rreceived(1,2) = commsHandle.parseBLE(data(1, 5:6),1000);
+%     Rreceived(1,3) = commsHandle.parseBLE(data(1, 7:8),1000);
+%     Rreceived(2,1) = commsHandle.parseBLE(data(1, 9:10),1000);%1
+%     Rreceived(2,2) = commsHandle.parseBLE(data(1, 11:12),1000);
+%     Rreceived(2,3) = commsHandle.parseBLE(data(1, 13:14),1000);
+%     Rreceived(3,1) = commsHandle.parseBLE(data(1, 15:16),1000);%1
+%     Rreceived(3,2) = commsHandle.parseBLE(data(1, 17:18),1000);
+%     Rreceived(3,3) = commsHandle.parseBLE(data(1, 19:20),1000);
+    
+%     OmegaReceived = [];
+%     OmegaReceived(1) = commsHandle.parseBLE(data(1, 15:16),1000);%1
+%     OmegaReceived(2) = commsHandle.parseBLE(data(1, 17:18),1000);
+%     OmegaReceived(3) = commsHandle.parseBLE(data(1, 19:20),1000);
 
      
     % Tylers data % --- (now - initTime)*100000

@@ -61,7 +61,7 @@ classdef XboxController < handle
             % Parse controller input into flight control command
             thrust = min(max(obj.cntrlState.Gamepad.sThumbLY / 128.5, 0), 255);
             yaw = min(max(((obj.cntrlState.Gamepad.sThumbLX + 32768)*60 / 65536 - 30), -30), 30);
-            pitch = min(max(((obj.cntrlState.Gamepad.sThumbRY + 32768)*60 / 65536 - 30),-30), 30);
+            pitch = -min(max(((obj.cntrlState.Gamepad.sThumbRY + 32768)*60 / 65536 - 30),-30), 30);
             roll = min(max(((obj.cntrlState.Gamepad.sThumbRX + 32768)*60 / 65536 - 30), -30), 30);
 
             % Manual override switch

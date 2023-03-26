@@ -48,7 +48,7 @@ classdef Communications < handle
             Rcmd = uint8(slope_m *(R_d + MAX));
             OmegaCmd = uint8(slope_m *(Omega_d + MAX));
 
-            packet = [obj.startByte, thrust, Rcmd(1,1), Rcmd(1,2), Rcmd(1,3), Rcmd(2,1), Rcmd(2,2), Rcmd(2,3), Rcmd(3,1), Rcmd(3,2), Rcmd(3,3), OmegaCmd(1), OmegaCmd(2), OmegaCmd(3), obj.endByte];
+            packet = [obj.startByte, uint8(thrust), Rcmd(1,1), Rcmd(1,2), Rcmd(1,3), Rcmd(2,1), Rcmd(2,2), Rcmd(2,3), Rcmd(3,1), Rcmd(3,2), Rcmd(3,3), OmegaCmd(1), OmegaCmd(2), OmegaCmd(3), obj.endByte];
             write(device,packet,"uint8") 
         end
 

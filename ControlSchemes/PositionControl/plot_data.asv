@@ -91,13 +91,5 @@ plot(error_code)
 title("OE / PE")
 
 figure()
-hold on;
-plot(torques(:,1))
-plot(torques(:,2))
-plot(torques(:,3))
-title("Torques")
-
-figure()
-hold on;
-plot(torques(:,4))
-title("Thrust")
+plot(error_code)
+title("OE / PE")
