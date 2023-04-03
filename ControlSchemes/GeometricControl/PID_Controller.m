@@ -5,8 +5,8 @@ classdef PID_Controller
                 
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
-            K_p = 300; %250
-            K_i = 15; % 250,15,350 good
+            K_p = 300; %300
+            K_i = 15; % 300,15,350 good
             K_d = 350;
             
             % Proportional
@@ -46,9 +46,9 @@ classdef PID_Controller
             
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
-            K_p = 300; %250 % Shouldnt do anything with 100 (maybe 1 degree commanded)
+            K_p = 300; %300 % Shouldnt do anything with 100 (maybe 1 degree commanded)
             K_i = 15; 
-            K_d = 350; % 250,15,350 good
+            K_d = 350; % 300,15,350 good
             
             % Proportional
             Y_pid_err.y_curr_error = y_d - y;

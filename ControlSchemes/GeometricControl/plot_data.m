@@ -2,10 +2,12 @@
 close all
 
 %% 3D
-figure()
-plot3(FullState(:,5),FullState(:,6),FullState(:,7))
-grid on;
-axis equal
+% figure()
+% plot3(FullState(:,5),FullState(:,6),FullState(:,7))
+% grid on;
+% axis equal
+
+
 % hold on;
 % for i=1:size(FullState,1)
 %     plot3(FullState(1:i,5),FullState(1:i,6),FullState(1:i,7))
@@ -15,30 +17,30 @@ axis equal
 
 
 %%
-
-% Position
-figure()
-subplot(3,1,1)
-hold on;
-plot(FullState(:,5))
-plot(FullState(:,2))
-title("X Trajectory")
-legend("X","Xref")
-
-subplot(3,1,2)
-hold on;
-plot(FullState(:,6))
-plot(FullState(:,3))
-title("Y Trajectory")
-legend("Y","Yref")
-
-subplot(3,1,3)
-hold on;
-plot(FullState(:,7))
-plot(FullState(:,4))
-title("Z Trajectory")
-legend("Z","Zref")
-
+% 
+% % Position
+% figure()
+% subplot(3,1,1)
+% hold on;
+% plot(FullState(:,5))
+% plot(FullState(:,2))
+% title("X Trajectory")
+% legend("X","Xref")
+% 
+% subplot(3,1,2)
+% hold on;
+% plot(FullState(:,6))
+% plot(FullState(:,3))
+% title("Y Trajectory")
+% legend("Y","Yref")
+% 
+% subplot(3,1,3)
+% hold on;
+% plot(FullState(:,7))
+% plot(FullState(:,4))
+% title("Z Trajectory")
+% legend("Z","Zref")
+% 
 % Attitude (I can also plot onboard attitude estimates vs the angle
 % commands I sent)
 figure()
@@ -65,7 +67,7 @@ plot(FullState(:,16)) %ahrs
 plot(FullState(:,13)) %cmd psi
 title("Attitude Trajectory Tracking - YAW")
 legend("MOCAP","AHRS","Commanded")
-
+% 
 
 
 % PWM
@@ -86,9 +88,9 @@ figure()
 plot(packetCount)
 title("Packet Count")
 
-figure()
-plot(error_code)
-title("OE / PE")
+% figure()
+% plot(error_code)
+% title("OE / PE")
 
 figure()
 hold on;

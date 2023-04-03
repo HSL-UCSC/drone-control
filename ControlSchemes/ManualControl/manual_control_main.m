@@ -111,14 +111,23 @@ end
 
 %% Wait for drone to be armed
 disp("Calibrate/arm drone to start autonomous flight")
-data = zeros(1,3); % For reading IMU
+data2 = zeros(1,3); % For reading IMU
 timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
+
+
+global data;
+global timestamp;
+data = zeros(1,20); % For reading IMU
+timestamp = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
+rec = [];
+rx = [];
+ijk = 1;
 
 toggleArm = 0;
 while(1)
     % Check if status onboard is armed
-    [data(1,:), timestamps(1)] = commsHandle.readBLE(ble_arm_char);
-    if(data(1,3) == 1)
+    [data2(1,:), timestamps(1)] = commsHandle.readBLE(ble_arm_char);
+    if(data2(1,3) == 1)
         toggleArm = 1;
         break;
     end
@@ -135,7 +144,8 @@ while(1)
         disp("Calibrating")
         commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_CAL, 1);
     end
-
+    rx(ijk) = commsHandle.parseBLE(data(1,19:20),1);
+    ijk = ijk + 1;
     pause(0.1);
 end
 
@@ -168,12 +178,6 @@ FullState = [];
 commsFromDrone = [];
 error_code = [0];
 
-
-global data;
-global timestamp;
-data = zeros(1,20); % For reading IMU
-timestamp = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
-rec = [];
 
 startT = tic; 
 while(1)
@@ -244,7 +248,8 @@ while(1)
     
      % Store on-board packet count
      packetCount(k,:) = data(1,15:16);
-
+    
+     rx(k) = commsHandle.parseBLE(data(1,19:20),1);
     
     % Collect the data being sent
     sent_data(k, :) = [xbox_comm_thrust, xbox_comm_roll, xbox_comm_pitch, xbox_comm_yaw];

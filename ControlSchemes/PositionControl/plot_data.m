@@ -17,27 +17,27 @@ axis equal
 %%
 
 % Position
-figure()
-subplot(3,1,1)
-hold on;
-plot(FullState(:,5))
-plot(FullState(:,2))
-title("X Trajectory")
-legend("X","Xref")
-
-subplot(3,1,2)
-hold on;
-plot(FullState(:,6))
-plot(FullState(:,3))
-title("Y Trajectory")
-legend("Y","Yref")
-
-subplot(3,1,3)
-hold on;
-plot(FullState(:,7))
-plot(FullState(:,4))
-title("Z Trajectory")
-legend("Z","Zref")
+% figure()
+% subplot(3,1,1)
+% hold on;
+% plot(FullState(:,5))
+% plot(FullState(:,2))
+% title("X Trajectory")
+% legend("X","Xref")
+% 
+% subplot(3,1,2)
+% hold on;
+% plot(FullState(:,6))
+% plot(FullState(:,3))
+% title("Y Trajectory")
+% legend("Y","Yref")
+% 
+% subplot(3,1,3)
+% hold on;
+% plot(FullState(:,7))
+% plot(FullState(:,4))
+% title("Z Trajectory")
+% legend("Z","Zref")
 
 % Attitude (I can also plot onboard attitude estimates vs the angle
 % commands I sent)
@@ -69,14 +69,14 @@ legend("MOCAP","AHRS","Commanded")
 
 
 % PWM
-figure()
-hold on;
-plot(FullState(:,23))
-plot(FullState(:,24))
-plot(FullState(:,25))
-plot(FullState(:,26))
-title("PWM Signals")
-legend("PWM 1", "PWM 2", "PWM 3", "PWM 4")
+% figure()
+% hold on;
+% plot(FullState(:,23))
+% plot(FullState(:,24))
+% plot(FullState(:,25))
+% plot(FullState(:,26))
+% title("PWM Signals")
+% legend("PWM 1", "PWM 2", "PWM 3", "PWM 4")
 
 figure()
 plot(loopTimes)
@@ -87,11 +87,19 @@ plot(packetCount)
 title("Packet Count")
 
 figure()
+hold on;
 plot(error_code)
-title("OE / PE")
+plot(error_code2)
+plot(error_code3)
+title("UART DMA Errors")
+legend("Transfer Error", "FIFO Error", "Direct Mode Error")
+
+% figure()
+% hold on;
+% plot(torques(:,1))
+% plot(torques(:,2))
+% title("Torques")
 
 figure()
-hold on;
-plot(torques(:,1))
-plot(torques(:,2))
-title("Torques")
+plot(Tcmds);
+title("gTHR")

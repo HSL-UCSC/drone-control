@@ -235,7 +235,7 @@ yRefs = [];
 zRefs = [];
 Rhat = [];
 FullState = [];
-
+omegaD_REC = [];
 commsFromDrone = [];
 error_code = [0];
 controlMode = 0;
@@ -350,7 +350,10 @@ while(1)
     end
     comm_Omega_d = (aut_desrired_parameters - aut_desrired_parameters_old)./dT; % THIS IS DESIRED ATTITUDE RATE?
     aut_desrired_parameters_old = aut_desrired_parameters;
-%     Omega_d
+    
+    % Saturate Omega_d
+    comm_Omega_d = min(max(-4, comm_Omega_d), 4);
+
     
 
 
@@ -370,7 +373,7 @@ while(1)
     
     % Generate desired R and Omega
     % Transform euler cmd into R_d,Omega_d commands
-    xbox_comm_R_d = eul2rotm([xbox_comm_pitch*pi/180, xbox_comm_roll*pi/180, xbox_comm_yaw*pi/180],'xyz');
+    xbox_comm_R_d = eul2rotm([xbox_comm_pitch*pi/180, xbox_comm_roll*pi/180, xbox_comm_yaw*pi/180],'xyz');% xbox_comm_yaw*pi/180
     Desired_skew_parameters = logm(xbox_comm_R_d); %Log of 3x3 gives us the skew symmetric version
     desrired_parameters = so3_hatinv(Desired_skew_parameters); % THIS IS JUST DESIRED ATTITUDE ANGLE?
     if(k == 1)
@@ -378,7 +381,11 @@ while(1)
     end
     xbox_comm_Omega_d = (desrired_parameters - desrired_parameters_old)./dT; % THIS IS DESIRED ATTITUDE RATE?
     desrired_parameters_old = desrired_parameters;
-    xbox_comm_Omega_d
+
+    % Saturate Omega_d
+    xbox_comm_Omega_d = min(max(-4, xbox_comm_Omega_d), 4);
+    omegaD_REC(:,k) = xbox_comm_Omega_d;
+
 
 
     % Send updates/commands to the Drone
@@ -415,13 +422,17 @@ while(1)
     end
 
        
-    xbox_comm_R_d = eye(3);
-    xbox_comm_Omega_d = [0 0 0];
+%     xbox_comm_R_d = eye(3);
+%     xbox_comm_Omega_d = [0 0 0];
     % Send attitude command
     if(controlMode == 1)
         commsHandle.sendGeometricAttitudeCmdPacket(device, xbox_comm_thrust, xbox_comm_R_d, xbox_comm_Omega_d);
+%         [xbox_comm_thrust, xbox_comm_Omega_d']
+        xbox_comm_R_d
     else
         commsHandle.sendGeometricAttitudeCmdPacket(device, comm_thr_d, comm_R_d, comm_Omega_d);
+%         [comm_thr_d, comm_Omega_d']
+        comm_R_d
     end
     wTimes(k) = toc(wTime);
     
@@ -455,9 +466,9 @@ while(1)
      error_code(k) = commsHandle.parseBLE(data(1,13:14),1);
     
      thrust = commsHandle.parseBLE(data(1, 19:20),1);
-     t1 = commsHandle.parseBLE(data(1,3:4),1);
-     t2 = commsHandle.parseBLE(data(1,5:6),1); 
-     t3 = commsHandle.parseBLE(data(1,7:8),1);
+     t1 = commsHandle.parseBLE(data(1,9:10),1);
+     t2 = commsHandle.parseBLE(data(1,11:12),1); 
+     t3 = commsHandle.parseBLE(data(1,13:14),1);
      torques(k,:) =  [t1, t2, t3, thrust];
 
 %     Rreceived = [];
@@ -503,9 +514,12 @@ end
 % Shut off drone
 disp("Shutting Down")
 ik = 0;
+comm_thr_d = 0;
+comm_R_d = eye(3);
+comm_Omega_d = [0 0 0];
 while ik < 10
     %QUIT
-    commsHandle.sendAttitudeCmdPacket(device,128,0,128,128);
+    commsHandle.sendGeometricAttitudeCmdPacket(device, comm_thr_d, comm_R_d, comm_Omega_d);
 %     java.lang.Thread.sleep(10);
     pause(0.01)
     ik = ik+1;

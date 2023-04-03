@@ -46,6 +46,9 @@ classdef Communications < handle
             MAX = 1;
             slope_m = 255.0/(MAX - -MAX);
             Rcmd = uint8(slope_m *(R_d + MAX));
+
+            MAX = 4;
+            slope_m = 255.0/(MAX - -MAX);
             OmegaCmd = uint8(slope_m *(Omega_d + MAX));
 
             packet = [obj.startByte, uint8(thrust), Rcmd(1,1), Rcmd(1,2), Rcmd(1,3), Rcmd(2,1), Rcmd(2,2), Rcmd(2,3), Rcmd(3,1), Rcmd(3,2), Rcmd(3,3), OmegaCmd(1), OmegaCmd(2), OmegaCmd(3), obj.endByte];
