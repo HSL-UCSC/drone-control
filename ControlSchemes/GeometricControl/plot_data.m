@@ -54,8 +54,8 @@ legend("MOCAP","AHRS","Commanded")
 
 subplot(3,1,2)
 hold on;
-plot(-FullState(:,17)) %mocap
-plot(-FullState(:,14)) %ahrs
+plot(FullState(:,17)) %mocap
+plot(FullState(:,14)) %ahrs
 plot(FullState(:,12)) %cmd theta
 title("Attitude Trajectory Tracking - PITCH")
 legend("MOCAP","AHRS","Commanded")
@@ -73,9 +73,9 @@ legend("MOCAP","AHRS","Commanded")
 % PWM
 figure()
 hold on;
-plot(FullState(:,23))
-plot(FullState(:,24))
-plot(FullState(:,25))
+% plot(FullState(:,23))
+% plot(FullState(:,24))
+% plot(FullState(:,25))
 plot(FullState(:,26))
 title("PWM Signals")
 legend("PWM 1", "PWM 2", "PWM 3", "PWM 4")
@@ -103,3 +103,8 @@ figure()
 hold on;
 plot(torques(:,4))
 title("Thrust")
+
+figure()
+hold on;
+plot(omegaD_REC(1,:))
+plot(omegaD_REC(2,:))

@@ -384,8 +384,14 @@ while(1)
 
     % Send attitude command
     if(controlMode == 1)
+        rollCmdTruth = xbox_comm_roll;
+        pitchCmdTruth = xbox_comm_pitch;
+        yawCmdTruth = xbox_comm_yaw;
         commsHandle.sendAttitudeCmdPacket(device,xbox_comm_yaw,xbox_comm_thrust,xbox_comm_roll,xbox_comm_pitch);
     else
+        rollCmdTruth = comm_phi_d;
+        pitchCmdTruth = comm_theta_d;
+        yawCmdTruth = comm_yaw_d;
         commsHandle.sendAttitudeCmdPacket(device,comm_yaw_d,comm_thr_d,comm_phi_d,comm_theta_d);
     end
     wTimes(k) = toc(wTime);
@@ -428,8 +434,8 @@ while(1)
 
      
     % Tylers data % --- (now - initTime)*100000
-    totalTime = totalTime + dT;
-    FullState(k,:) = [totalTime, x_ref,y_ref,z_ref,x_f,y_f,z_f,vx_f,vy_f,vz_f,phi_d,theta_d,psi_d,ahrsX,ahrsY,ahrsZ,Drone_attitude_data(k,1),Drone_attitude_data(k,2),Drone_attitude_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
+    totalTime = totalTime + dT; 
+    FullState(k,:) = [totalTime, x_ref,y_ref,z_ref,x_f,y_f,z_f,vx_f,vy_f,vz_f,rollCmdTruth,pitchCmdTruth,yawCmdTruth,ahrsX,ahrsY,ahrsZ,Drone_attitude_data(k,1),Drone_attitude_data(k,2),Drone_attitude_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
     
     
     % Collect the data being sent

@@ -112,9 +112,10 @@ memShareTimes   = [];
 xboxTimes       = [];
 
 %% Frequencies
-OUT_FREQ = 60; % 60Hz write only
+OUT_FREQ = 100; % 60Hz write only
 CUT_OFF_FREQ_VEL = 10;
 CUT_OFF_FREQ_POS = 10;
+CUT_OFF_FREQ_ATT_RATE = 0.25;
 
 %% Mass of the drone
 m = 69.89/1000;
@@ -149,6 +150,10 @@ prev_x =  DronePos(2);
 prev_y =  DronePos(3);
 prev_z =  DronePos(4);
 
+
+lpfData_omegaD_roll = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_ATT_RATE, 0);
+lpfData_omegaD_pitch = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_ATT_RATE, 0);
+
 %% Warm up Filter
 disp("Running warmup filter")
 for i = 1:WARMUP
@@ -166,6 +171,12 @@ for i = 1:WARMUP
     [z_f, lpfData_z] = Filter.lpf_2(lpfData_z, DronePos(4));
     [vz_f, lpfData_vz] = Filter.lpf_2(lpfData_vz, z_f - prev_z);
     prev_z = z_f;
+
+
+
+    % Omega_D
+    [omegaD_roll_fil, lpfData_omegaD_roll] = Filter.lpf_2(lpfData_omegaD_roll, 0);
+    [omegaD_pitch_fil, lpfData_omegaD_pitch] = Filter.lpf_2(lpfData_omegaD_pitch, 0);
     
 end
 
@@ -369,7 +380,7 @@ while(1)
     xboxTimes(k) = toc(xboxTime);
 
     [xbox_comm_thrust,xbox_comm_yaw,xbox_comm_pitch,xbox_comm_roll]
-
+    
     
     % Generate desired R and Omega
     % Transform euler cmd into R_d,Omega_d commands
@@ -382,6 +393,12 @@ while(1)
     xbox_comm_Omega_d = (desrired_parameters - desrired_parameters_old)./dT; % THIS IS DESIRED ATTITUDE RATE?
     desrired_parameters_old = desrired_parameters;
 
+    % Filter Omega_d
+    [omegaD_roll_fil, lpfData_omegaD_roll] = Filter.lpf_2(lpfData_omegaD_roll, xbox_comm_Omega_d(1));
+    [omegaD_pitch_fil, lpfData_omegaD_pitch] = Filter.lpf_2(lpfData_omegaD_pitch, xbox_comm_Omega_d(2));
+    omegaD_yaw = xbox_comm_Omega_d(3);
+    xbox_comm_Omega_d = [omegaD_roll_fil;omegaD_pitch_fil;omegaD_yaw];
+    
     % Saturate Omega_d
     xbox_comm_Omega_d = min(max(-4, xbox_comm_Omega_d), 4);
     omegaD_REC(:,k) = xbox_comm_Omega_d;
@@ -426,10 +443,16 @@ while(1)
 %     xbox_comm_Omega_d = [0 0 0];
     % Send attitude command
     if(controlMode == 1)
+        rollCmdTruth = xbox_comm_roll;
+        pitchCmdTruth = xbox_comm_pitch;
+        yawCmdTruth = xbox_comm_yaw;
         commsHandle.sendGeometricAttitudeCmdPacket(device, xbox_comm_thrust, xbox_comm_R_d, xbox_comm_Omega_d);
 %         [xbox_comm_thrust, xbox_comm_Omega_d']
         xbox_comm_R_d
     else
+        rollCmdTruth = phi_d;
+        pitchCmdTruth = theta_d;
+        yawCmdTruth = 0;
         commsHandle.sendGeometricAttitudeCmdPacket(device, comm_thr_d, comm_R_d, comm_Omega_d);
 %         [comm_thr_d, comm_Omega_d']
         comm_R_d
@@ -489,8 +512,8 @@ while(1)
 
      
     % Tylers data % --- (now - initTime)*100000
-    totalTime = totalTime + dT;
-    FullState(k,:) = [totalTime, x_ref,y_ref,z_ref,x_f,y_f,z_f,vx_f,vy_f,vz_f,phi_d,theta_d,psi_d,ahrsX,ahrsY,ahrsZ,Drone_attitude_data(k,1),Drone_attitude_data(k,2),Drone_attitude_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
+    totalTime = totalTime + dT;  
+    FullState(k,:) = [totalTime, x_ref,y_ref,z_ref,x_f,y_f,z_f,vx_f,vy_f,vz_f,rollCmdTruth,pitchCmdTruth,yawCmdTruth,ahrsX,ahrsY,ahrsZ,Drone_attitude_data(k,1),Drone_attitude_data(k,2),Drone_attitude_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
     
     
     % Collect the data being sent
