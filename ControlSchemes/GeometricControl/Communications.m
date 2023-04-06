@@ -44,20 +44,24 @@ classdef Communications < handle
             OmegaCmd = zeros(3);
 
             MAX = 1;
-            slope_m = 255.0/(MAX - -MAX);
-            Rcmd = uint8(slope_m *(R_d + MAX));
+            slope_m = 65535.0/(MAX - -MAX); %255
+            Rcmd = slope_m *(R_d + MAX);
+            Rcmd_row1 = typecast(uint16(Rcmd(1,:)),'uint8');
+            Rcmd_row2 = typecast(uint16(Rcmd(2,:)),'uint8');
+            Rcmd_row3 = typecast(uint16(Rcmd(3,:)),'uint8');
 
             MAX = 4;
             slope_m = 255.0/(MAX - -MAX);
             OmegaCmd = uint8(slope_m *(Omega_d + MAX));
 
-            packet = [obj.startByte, uint8(thrust), Rcmd(1,1), Rcmd(1,2), Rcmd(1,3), Rcmd(2,1), Rcmd(2,2), Rcmd(2,3), Rcmd(3,1), Rcmd(3,2), Rcmd(3,3), OmegaCmd(1), OmegaCmd(2), OmegaCmd(3), obj.endByte];
+%             packet = [obj.startByte, uint8(thrust), Rcmd(1,1), Rcmd(1,2), Rcmd(1,3), Rcmd(2,1), Rcmd(2,2), Rcmd(2,3), Rcmd(3,1), Rcmd(3,2), Rcmd(3,3), OmegaCmd(1), OmegaCmd(2), OmegaCmd(3), obj.endByte];
+            packet = [obj.startByte, uint8(thrust), Rcmd_row1(1), Rcmd_row1(2), Rcmd_row1(3), Rcmd_row1(4), Rcmd_row1(5), Rcmd_row1(6), Rcmd_row2(1), Rcmd_row2(2), Rcmd_row2(3), Rcmd_row2(4), Rcmd_row2(5), Rcmd_row2(6), Rcmd_row3(1), Rcmd_row3(2), Rcmd_row3(3), Rcmd_row3(4), Rcmd_row3(5), Rcmd_row3(6), OmegaCmd(1), OmegaCmd(2), OmegaCmd(3), obj.endByte];
             write(device,packet,"uint8") 
         end
 
         function packet = sendDataUpdatePacket(obj,device,index,value)
             % Build attitude command packet
-            packet = [obj.startByte, obj.startByte_DataUpdate, obj.endByte_DataUpdate, index, value, 0, 0, 0, 0, 0, 0, 0, 0, 0, obj.endByte];
+            packet = [obj.startByte, obj.startByte_DataUpdate, obj.endByte_DataUpdate, index, value, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, obj.endByte];
             write(device,packet,"uint8")
         end
 

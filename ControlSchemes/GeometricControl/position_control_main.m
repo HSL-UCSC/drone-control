@@ -446,16 +446,18 @@ while(1)
         rollCmdTruth = xbox_comm_roll;
         pitchCmdTruth = xbox_comm_pitch;
         yawCmdTruth = xbox_comm_yaw;
+
         commsHandle.sendGeometricAttitudeCmdPacket(device, xbox_comm_thrust, xbox_comm_R_d, xbox_comm_Omega_d);
 %         [xbox_comm_thrust, xbox_comm_Omega_d']
-        xbox_comm_R_d
+        xbox_comm_R_d;
     else
         rollCmdTruth = phi_d;
         pitchCmdTruth = theta_d;
         yawCmdTruth = 0;
+
         commsHandle.sendGeometricAttitudeCmdPacket(device, comm_thr_d, comm_R_d, comm_Omega_d);
 %         [comm_thr_d, comm_Omega_d']
-        comm_R_d
+        comm_R_d;
     end
     wTimes(k) = toc(wTime);
     
@@ -547,6 +549,9 @@ while ik < 10
     pause(0.01)
     ik = ik+1;
 end
+
+
+
 
 % Finally, Close the Motive Client
 mocapHandle.shutdown();
