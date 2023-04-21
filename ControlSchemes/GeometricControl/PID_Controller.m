@@ -5,9 +5,9 @@ classdef PID_Controller
                 
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
-            K_p = 300; %300
+            K_p = 350; %300
             K_i = 15; % 300,15,350 good
-            K_d = 350;
+            K_d = 450;
             
             % Proportional
             X_pid_err.x_curr_error = x_d - x;
@@ -46,9 +46,9 @@ classdef PID_Controller
             
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
-            K_p = 300; %300 % Shouldnt do anything with 100 (maybe 1 degree commanded)
+            K_p = 350; %300 % Shouldnt do anything with 100 (maybe 1 degree commanded)
             K_i = 15; 
-            K_d = 350; % 300,15,350 good
+            K_d = 450; % 300,15,350 good
             
             % Proportional
             Y_pid_err.y_curr_error = y_d - y;
@@ -87,9 +87,9 @@ classdef PID_Controller
             
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
-            K_p = 300; % 200
+            K_p = 200; % 300
             K_i = 30; 
-            K_d = 120; % 200,30,120 good
+            K_d = 120; % 300,30,120 good
             
             % Proportional
             Z_pid_err.z_curr_error = z_d - z;
@@ -123,7 +123,8 @@ classdef PID_Controller
             pid_output = [pid_p, pid_i, pid_d];
             
             T = pid_p + pid_i + pid_d;
-            T = uint8(min(max(0,T), 255));
+%             T = uint8(min(max(0,T), 255));
+            T = min(max(0,T), 255);
             
             
             

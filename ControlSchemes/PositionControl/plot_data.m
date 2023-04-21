@@ -94,11 +94,13 @@ plot(error_code3)
 title("UART DMA Errors")
 legend("Transfer Error", "FIFO Error", "Direct Mode Error")
 
-% figure()
-% hold on;
-% plot(torques(:,1))
-% plot(torques(:,2))
-% title("Torques")
+figure()
+hold on;
+plot(torques(:,1))
+plot(torques(:,2))
+% plot(torques(:,3))
+plot(zeros(size(torques,1),1))
+title("Torques")
 
 figure()
 plot(Tcmds);

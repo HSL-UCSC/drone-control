@@ -150,9 +150,10 @@ prev_x =  DronePos(2);
 prev_y =  DronePos(3);
 prev_z =  DronePos(4);
 
-
-lpfData_omegaD_roll = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_ATT_RATE, 0);
-lpfData_omegaD_pitch = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_ATT_RATE, 0);
+lpfData_omegaD_roll_autonomous = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_ATT_RATE, 0);
+lpfData_omegaD_pitch_autonomous = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_ATT_RATE, 0);
+lpfData_omegaD_roll_xbox = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_ATT_RATE, 0);
+lpfData_omegaD_pitch_xbox = Filter.lpf_2_init(OUT_FREQ, CUT_OFF_FREQ_ATT_RATE, 0);
 
 %% Warm up Filter
 disp("Running warmup filter")
@@ -175,8 +176,10 @@ for i = 1:WARMUP
 
 
     % Omega_D
-    [omegaD_roll_fil, lpfData_omegaD_roll] = Filter.lpf_2(lpfData_omegaD_roll, 0);
-    [omegaD_pitch_fil, lpfData_omegaD_pitch] = Filter.lpf_2(lpfData_omegaD_pitch, 0);
+    [omegaD_roll_aut_fil, lpfData_omegaD_roll_autonomous] = Filter.lpf_2(lpfData_omegaD_roll_autonomous, 0);
+    [omegaD_pitch_aut_fil, lpfData_omegaD_pitch_autonomous] = Filter.lpf_2(lpfData_omegaD_pitch_autonomous, 0);
+    [omegaD_roll_fil, lpfData_omegaD_roll_xbox] = Filter.lpf_2(lpfData_omegaD_roll_xbox, 0);
+    [omegaD_pitch_fil, lpfData_omegaD_pitch_xbox] = Filter.lpf_2(lpfData_omegaD_pitch_xbox, 0);
     
 end
 
@@ -248,6 +251,7 @@ Rhat = [];
 FullState = [];
 omegaD_REC = [];
 commsFromDrone = [];
+trueCmdsRec = [];
 error_code = [0];
 controlMode = 0;
 landingFlag = 0;
@@ -362,8 +366,14 @@ while(1)
     comm_Omega_d = (aut_desrired_parameters - aut_desrired_parameters_old)./dT; % THIS IS DESIRED ATTITUDE RATE?
     aut_desrired_parameters_old = aut_desrired_parameters;
     
+    % Filter Omega_d
+    [omegaD_roll_aut_fil, lpfData_omegaD_roll_autonomous] = Filter.lpf_2(lpfData_omegaD_roll_autonomous, comm_Omega_d(1));
+    [omegaD_pitch_aut_fil, lpfData_omegaD_pitch_autonomous] = Filter.lpf_2(lpfData_omegaD_pitch_autonomous, comm_Omega_d(2));
+    omegaD_yaw = comm_Omega_d(3);
+    comm_Omega_d = [omegaD_roll_aut_fil;omegaD_pitch_aut_fil;omegaD_yaw];
+    
     % Saturate Omega_d
-    comm_Omega_d = min(max(-4, comm_Omega_d), 4);
+    comm_Omega_d = min(max(-4, comm_Omega_d), 4)
 
     
 
@@ -379,7 +389,7 @@ while(1)
         setpointMode,setpointPrev,setpointNext] = xboxControllerHandle.getState();
     xboxTimes(k) = toc(xboxTime);
 
-    [xbox_comm_thrust,xbox_comm_yaw,xbox_comm_pitch,xbox_comm_roll]
+%     [xbox_comm_thrust,xbox_comm_yaw,xbox_comm_pitch,xbox_comm_roll]
     
     
     % Generate desired R and Omega
@@ -394,14 +404,13 @@ while(1)
     desrired_parameters_old = desrired_parameters;
 
     % Filter Omega_d
-    [omegaD_roll_fil, lpfData_omegaD_roll] = Filter.lpf_2(lpfData_omegaD_roll, xbox_comm_Omega_d(1));
-    [omegaD_pitch_fil, lpfData_omegaD_pitch] = Filter.lpf_2(lpfData_omegaD_pitch, xbox_comm_Omega_d(2));
+    [omegaD_roll_fil, lpfData_omegaD_roll_xbox] = Filter.lpf_2(lpfData_omegaD_roll_xbox, xbox_comm_Omega_d(1));
+    [omegaD_pitch_fil, lpfData_omegaD_pitch_xbox] = Filter.lpf_2(lpfData_omegaD_pitch_xbox, xbox_comm_Omega_d(2));
     omegaD_yaw = xbox_comm_Omega_d(3);
     xbox_comm_Omega_d = [omegaD_roll_fil;omegaD_pitch_fil;omegaD_yaw];
     
     % Saturate Omega_d
     xbox_comm_Omega_d = min(max(-4, xbox_comm_Omega_d), 4);
-    omegaD_REC(:,k) = xbox_comm_Omega_d;
 
 
 
@@ -446,20 +455,25 @@ while(1)
         rollCmdTruth = xbox_comm_roll;
         pitchCmdTruth = xbox_comm_pitch;
         yawCmdTruth = xbox_comm_yaw;
+        omegaD_REC(:,k) = xbox_comm_Omega_d;
+        
+%         xbox_comm_R_d=eye(3);
+%         xbox_comm_Omega_d=[0;0;0];
 
         commsHandle.sendGeometricAttitudeCmdPacket(device, xbox_comm_thrust, xbox_comm_R_d, xbox_comm_Omega_d);
-%         [xbox_comm_thrust, xbox_comm_Omega_d']
-        xbox_comm_R_d;
+        [xbox_comm_thrust, xbox_comm_Omega_d']
     else
         rollCmdTruth = phi_d;
         pitchCmdTruth = theta_d;
         yawCmdTruth = 0;
+        omegaD_REC(:,k) = comm_Omega_d;
+        [comm_thr_d, comm_Omega_d']
 
         commsHandle.sendGeometricAttitudeCmdPacket(device, comm_thr_d, comm_R_d, comm_Omega_d);
-%         [comm_thr_d, comm_Omega_d']
-        comm_R_d;
     end
     wTimes(k) = toc(wTime);
+
+    trueCmdsRec(k,:) = [rollCmdTruth, pitchCmdTruth, yawCmdTruth];
     
 
 
@@ -476,11 +490,11 @@ while(1)
     pwm4 = commsHandle.parseBLE(data(1,15:16),1);
     pwmSignals(k,:) = [pwm1, pwm2, pwm3, pwm4];
 
-%     % Store on-board attitude commands
-%      attCmdX = commsHandle.parseBLE(data(1,17:18),10);%100
-%      attCmdY = commsHandle.parseBLE(data(1,19:20),10);
-%      attCmdZ = commsHandle.parseBLE(data(1,13:14),10);
-%      eulerCmdRec(k,:) = [attCmdX,attCmdY,attCmdZ]; % Commanded
+    % Store on-board attitude commands
+     attCmdX = commsHandle.parseBLE(data(1,9:10),10);%100
+     attCmdY = commsHandle.parseBLE(data(1,11:12),10);
+     attCmdZ = commsHandle.parseBLE(data(1,13:14),10);
+     eulerCmdRec(k,:) = [attCmdX,attCmdY,attCmdZ]; % Commanded
 
      % Store packet count
      packetCount(k,:) = data(1,17:18);
@@ -490,7 +504,7 @@ while(1)
      error_code(k) = commsHandle.parseBLE(data(1,19:20),1);
      error_code(k) = commsHandle.parseBLE(data(1,13:14),1);
     
-     thrust = commsHandle.parseBLE(data(1, 19:20),1);
+     thrust = commsHandle.parseBLE(data(1, 19:20),1000);
      t1 = commsHandle.parseBLE(data(1,9:10),1);
      t2 = commsHandle.parseBLE(data(1,11:12),1); 
      t3 = commsHandle.parseBLE(data(1,13:14),1);
@@ -515,8 +529,9 @@ while(1)
      
     % Tylers data % --- (now - initTime)*100000
     totalTime = totalTime + dT;  
-    FullState(k,:) = [totalTime, x_ref,y_ref,z_ref,x_f,y_f,z_f,vx_f,vy_f,vz_f,rollCmdTruth,pitchCmdTruth,yawCmdTruth,ahrsX,ahrsY,ahrsZ,Drone_attitude_data(k,1),Drone_attitude_data(k,2),Drone_attitude_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
-    
+%     FullState(k,:) = [totalTime, x_ref,y_ref,z_ref,x_f,y_f,z_f,vx_f,vy_f,vz_f,rollCmdTruth,pitchCmdTruth,yawCmdTruth,ahrsX,ahrsY,ahrsZ,Drone_attitude_data(k,1),Drone_attitude_data(k,2),Drone_attitude_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
+    FullState(k,:) = [totalTime, x_ref,y_ref,z_ref,x_f,y_f,z_f,vx_f,vy_f,vz_f,eulerCmdRec(k,1),eulerCmdRec(k,2),eulerCmdRec(k,3),ahrsX,ahrsY,ahrsZ,Drone_attitude_data(k,1),Drone_attitude_data(k,2),Drone_attitude_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
+
     
     % Collect the data being sent
     errors(k) = Y_pid.y_curr_error;
@@ -528,7 +543,7 @@ while(1)
     % Sleep delay 
     s = tic;
 % %     java.lang.Thread.sleep(5); % 5ms delay
-    pause(0.005)
+    pause(0.015)
 
     sleepTimes(k) = toc(s);
 

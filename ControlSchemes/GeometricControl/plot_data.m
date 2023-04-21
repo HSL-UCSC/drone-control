@@ -48,17 +48,19 @@ subplot(3,1,1)
 hold on;
 plot(FullState(:,18)) %mocap
 plot(FullState(:,15)) %ahrs
-plot(FullState(:,11)) %cmd phi
+plot(FullState(:,12)) %cmd phi
+plot(omegaD_REC(2,:)*180/pi)
 title("Attitude Trajectory Tracking - ROLL")
-legend("MOCAP","AHRS","Commanded")
+legend("MOCAP","AHRS","Commanded Roll","Commanded Roll Rate")
 
 subplot(3,1,2)
 hold on;
 plot(FullState(:,17)) %mocap
 plot(FullState(:,14)) %ahrs
-plot(FullState(:,12)) %cmd theta
+plot(FullState(:,11)) %cmd theta
+plot(omegaD_REC(1,:)*180/pi)
 title("Attitude Trajectory Tracking - PITCH")
-legend("MOCAP","AHRS","Commanded")
+legend("MOCAP","AHRS","Commanded Pitch","Commanded Pitch Rate")
 
 subplot(3,1,3)
 hold on;
@@ -102,9 +104,19 @@ title("Torques")
 figure()
 hold on;
 plot(torques(:,4))
-title("Thrust")
+title(">3 error")
 
 figure()
 hold on;
 plot(omegaD_REC(1,:))
 plot(omegaD_REC(2,:))
+
+% figure()
+% subplot(2,1,1);
+% hold on;
+% plot(omegaD_REC(1,:)*100)
+% plot(FullState(:,11)) %cmd phi
+% subplot(2,1,2);
+% hold on;
+% plot(omegaD_REC(2,:)*100)
+% plot(FullState(:,12)) %cmd theta

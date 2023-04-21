@@ -395,7 +395,7 @@ while(1)
         commsHandle.sendAttitudeCmdPacket(device,comm_yaw_d,comm_thr_d,comm_phi_d,comm_theta_d);
     end
     wTimes(k) = toc(wTime);
-    
+
 
 
 
