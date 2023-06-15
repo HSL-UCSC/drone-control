@@ -42,7 +42,7 @@ else
           'Cannot open file "%s": %s.', memshare_filename, msg);
 end
 %     end
- 
+
 % Memory map the file.
 memMap = memmapfile(memshare_filename, 'Writable', true, 'Format', 'double');
 
@@ -56,8 +56,8 @@ mocapHandle.init(dllPath)
 commsHandle = Communications();
 
 % Create bluetooth connection
-% b = ble("C02835321733"); % ST DRONE FRAME 1
-b = ble("C0286e325133"); % ST DRONE FRAME 2
+b = ble("C02835321733"); % ST DRONE FRAME 1
+% b = ble("C0286e325133"); % ST DRONE FRAME 2
 ble_imu_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00E00000-0001-11E1-AC36-0002A5D5C51B"); % Read IMU
 ble_arm_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "20000000-0001-11E1-AC36-0002A5D5C51B"); % Read arming status
 % ble_bat_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "001D0000-0001-11E1-AC36-0002A5D5C51B"); % Read battery/pressure status
@@ -66,7 +66,7 @@ subscribe(ble_imu_char)
 ble_imu_char.DataAvailableFcn = @saveImuData;
 
 % Open serial port for HC12 connection
-device = serialport("COM5",19200);%19200
+device = serialport("COM5",38400);%19200
 flush(device)
 
 
@@ -115,7 +115,7 @@ xboxTimes       = [];
 OUT_FREQ = 100; % 60Hz write only
 CUT_OFF_FREQ_VEL = 10;
 CUT_OFF_FREQ_POS = 10;
-CUT_OFF_FREQ_ATT_RATE = 0.25;
+CUT_OFF_FREQ_ATT_RATE = 1; %0.25 (higher = more aggresive)
 
 %% Mass of the drone
 m = 69.89/1000;
@@ -189,6 +189,9 @@ disp("Calibrate/arm drone to start autonomous flight")
 data = zeros(1,3); % For reading IMU
 timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
 
+controlMode = 0;
+% commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_CM, controlMode);
+
 toggleArm = 0;
 while(1)
     % Check if status onboard is armed
@@ -253,9 +256,10 @@ omegaD_REC = [];
 commsFromDrone = [];
 trueCmdsRec = [];
 error_code = [0];
-controlMode = 0;
+% controlMode = 0;
 landingFlag = 0;
-
+xboxRec = [];
+overrunFlag = [];
 
 global data;
 global timestamp;
@@ -373,7 +377,7 @@ while(1)
     comm_Omega_d = [omegaD_roll_aut_fil;omegaD_pitch_aut_fil;omegaD_yaw];
     
     % Saturate Omega_d
-    comm_Omega_d = min(max(-4, comm_Omega_d), 4)
+    comm_Omega_d = min(max(-0.5, comm_Omega_d), 0.5);
 
     
 
@@ -389,12 +393,17 @@ while(1)
         setpointMode,setpointPrev,setpointNext] = xboxControllerHandle.getState();
     xboxTimes(k) = toc(xboxTime);
 
+    xboxRec(:,k) = [xbox_comm_roll;xbox_comm_pitch];
+
 %     [xbox_comm_thrust,xbox_comm_yaw,xbox_comm_pitch,xbox_comm_roll]
     
     
     % Generate desired R and Omega
     % Transform euler cmd into R_d,Omega_d commands
-    xbox_comm_R_d = eul2rotm([xbox_comm_pitch*pi/180, xbox_comm_roll*pi/180, xbox_comm_yaw*pi/180],'xyz');% xbox_comm_yaw*pi/180
+%     xbox_comm_roll = max(min(15,xbox_comm_roll),-15);
+%     xbox_comm_pitch = max(min(15,xbox_comm_pitch),-15);
+    xbox_comm_R_d = eul2rotm([xbox_comm_pitch*pi/180, xbox_comm_roll*pi/180, 0],'xyz');% xbox_comm_yaw*pi/180
+%     xbox_comm_R_d = eul2rotm([xbox_comm_yaw*pi/180, xbox_comm_roll*pi/180, xbox_comm_pitch*pi/180],'xyz');% xbox_comm_yaw*pi/180
     Desired_skew_parameters = logm(xbox_comm_R_d); %Log of 3x3 gives us the skew symmetric version
     desrired_parameters = so3_hatinv(Desired_skew_parameters); % THIS IS JUST DESIRED ATTITUDE ANGLE?
     if(k == 1)
@@ -410,7 +419,7 @@ while(1)
     xbox_comm_Omega_d = [omegaD_roll_fil;omegaD_pitch_fil;omegaD_yaw];
     
     % Saturate Omega_d
-    xbox_comm_Omega_d = min(max(-4, xbox_comm_Omega_d), 4);
+    xbox_comm_Omega_d = min(max(-0.5, xbox_comm_Omega_d), 0.5);
 
 
 
@@ -446,7 +455,7 @@ while(1)
         [x_ref, y_ref, z_ref] = waypointsHandle.getWaypoint();
         fprintf('Setpoint change: [%.2f,%.2f,%.2f]\n', x_ref,y_ref,z_ref);
     end
-
+    
        
 %     xbox_comm_R_d = eye(3);
 %     xbox_comm_Omega_d = [0 0 0];
@@ -454,7 +463,11 @@ while(1)
     if(controlMode == 1)
         rollCmdTruth = xbox_comm_roll;
         pitchCmdTruth = xbox_comm_pitch;
-        yawCmdTruth = xbox_comm_yaw;
+%         yawCmdTruth = xbox_comm_yaw;
+        yawCmdTruth = 0;
+        
+        xbox_comm_Omega_d(3) = 0;
+
         omegaD_REC(:,k) = xbox_comm_Omega_d;
         
 %         xbox_comm_R_d=eye(3);
@@ -522,9 +535,17 @@ while(1)
 %     Rreceived(3,3) = commsHandle.parseBLE(data(1, 19:20),1000);
     
 %     OmegaReceived = [];
-%     OmegaReceived(1) = commsHandle.parseBLE(data(1, 15:16),1000);%1
-%     OmegaReceived(2) = commsHandle.parseBLE(data(1, 17:18),1000);
-%     OmegaReceived(3) = commsHandle.parseBLE(data(1, 19:20),1000);
+    OmegaReceived(1) = commsHandle.parseBLE(data(1, 15:16),1000);%1
+    OmegaReceived(2) = commsHandle.parseBLE(data(1, 17:18),1000);
+    OmegaReceived(3) = commsHandle.parseBLE(data(1, 19:20),1000);%%%%%%%%%%%%%%%%
+    omegasRecord(k) = OmegaReceived(1);
+
+    ahrsStX = commsHandle.parseBLE(data(1, 15:16),1);%1
+    ahrsStY = commsHandle.parseBLE(data(1, 17:18),1);
+    ahrsStZ = commsHandle.parseBLE(data(1, 19:20),1);%%%%%%%%%%%%%%%%
+    motorTorques(k,:) = [ahrsStX, ahrsStY, ahrsStZ]; % AHRS
+
+    overrunFlag(k) = commsHandle.parseBLE(data(1, 15:16),1);
 
      
     % Tylers data % --- (now - initTime)*100000
@@ -543,7 +564,7 @@ while(1)
     % Sleep delay 
     s = tic;
 % %     java.lang.Thread.sleep(5); % 5ms delay
-    pause(0.015)
+    pause(0.02) %0.02
 
     sleepTimes(k) = toc(s);
 

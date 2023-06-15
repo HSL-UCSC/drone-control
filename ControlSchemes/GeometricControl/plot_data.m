@@ -14,7 +14,25 @@ close all
 %     axis([0 0.5 0 1.0 0 1.0 ])
 %     pause(0.01)
 % end
-
+% Plot Commanded Position, true position
+figure()
+hold on;
+plot(FullState(:,1), FullState(:,2)) % cmd x
+plot(FullState(:,1), FullState(:,5)) % mocap x
+title("Commanded X Position")
+legend("Command","MOCAP")
+figure()
+hold on;
+plot(FullState(:,1), FullState(:,3)) % cmd x
+plot(FullState(:,1), FullState(:,6)) % mocap x
+title("Commanded Y Position")
+legend("Command","MOCAP")
+figure()
+hold on;
+plot(FullState(:,1), FullState(:,4)) % cmd x
+plot(FullState(:,1), FullState(:,7)) % mocap x
+title("Commanded Z Position")
+legend("Command","MOCAP")
 
 %%
 % 
@@ -46,39 +64,59 @@ close all
 figure()
 subplot(3,1,1)
 hold on;
-plot(FullState(:,18)) %mocap
-plot(FullState(:,15)) %ahrs
-plot(FullState(:,12)) %cmd phi
-plot(omegaD_REC(2,:)*180/pi)
+plot(FullState(:,1), FullState(:,18)) %mocap
+plot(FullState(:,1), FullState(:,15)) %ahrs
+plot(FullState(:,1), FullState(:,12)) %cmd phi
+% plot(trueCmdsRec(:,1))
+plot(FullState(:,1), omegaD_REC(2,:)*180/pi)
 title("Attitude Trajectory Tracking - ROLL")
 legend("MOCAP","AHRS","Commanded Roll","Commanded Roll Rate")
 
 subplot(3,1,2)
 hold on;
-plot(FullState(:,17)) %mocap
-plot(FullState(:,14)) %ahrs
-plot(FullState(:,11)) %cmd theta
-plot(omegaD_REC(1,:)*180/pi)
+plot(FullState(:,1), FullState(:,17)) %mocap
+plot(FullState(:,1), FullState(:,14)) %ahrs
+plot(FullState(:,1), FullState(:,11)) %cmd theta
+% plot(trueCmdsRec(:,2))
+plot(FullState(:,1), omegaD_REC(1,:)*180/pi)
 title("Attitude Trajectory Tracking - PITCH")
 legend("MOCAP","AHRS","Commanded Pitch","Commanded Pitch Rate")
 
 subplot(3,1,3)
 hold on;
-plot(FullState(:,19)) %mocap
-plot(FullState(:,16)) %ahrs
-plot(FullState(:,13)) %cmd psi
+plot(FullState(:,1), FullState(:,19)) %mocap
+plot(FullState(:,1), FullState(:,16)) %ahrs
+plot(FullState(:,1), FullState(:,13)) %cmd psi
+plot(FullState(:,1), omegaD_REC(3,:)*180/pi)
 title("Attitude Trajectory Tracking - YAW")
-legend("MOCAP","AHRS","Commanded")
+legend("MOCAP","AHRS","Commanded Yaw", "Commanded Yaw Rate")
 % 
 
+figure()
+subplot(2,1,1)
+hold on
+plot(FullState(:,1), FullState(:,18)) %mocap
+% plot(FullState(:,1), ahrsStRec(:,2)) %ST ahrs
+plot(FullState(:,1), FullState(:,15)) %HSL ahrs
+legend("MOCAP","ST","HSL")
+title("Roll")
 
+subplot(2,1,2)
+hold on
+plot(FullState(:,1), FullState(:,17)) %mocap
+% plot(FullState(:,1), ahrsStRec(:,1)) %ST ahrs
+plot(FullState(:,1), FullState(:,14)) %HSL ahrs
+legend("MOCAP","ST","HSL")
+title("Pitch")
+
+%%
 % PWM
 figure()
 hold on;
 % plot(FullState(:,23))
 % plot(FullState(:,24))
 % plot(FullState(:,25))
-plot(FullState(:,26))
+plot(FullState(:,1), FullState(:,26))
 title("PWM Signals")
 legend("PWM 1", "PWM 2", "PWM 3", "PWM 4")
 
@@ -87,7 +125,7 @@ plot(loopTimes)
 title("Loop Times")
 
 figure()
-plot(packetCount)
+plot(FullState(:,1), packetCount)
 title("Packet Count")
 
 % figure()
@@ -96,20 +134,23 @@ title("Packet Count")
 
 figure()
 hold on;
-plot(torques(:,1))
-plot(torques(:,2))
-plot(torques(:,3))
+plot(FullState(:,1), torques(:,1))
+plot(FullState(:,1), torques(:,2))
+plot(FullState(:,1), torques(:,3))
 title("Torques")
 
 figure()
 hold on;
-plot(torques(:,4))
+plot(FullState(:,1), torques(:,4))
 title(">3 error")
 
 figure()
 hold on;
-plot(omegaD_REC(1,:))
-plot(omegaD_REC(2,:))
+plot(FullState(:,1), omegaD_REC(1,:))
+plot(FullState(:,1), omegaD_REC(2,:))
+
+figure()
+plot(overrunFlag)
 
 % figure()
 % subplot(2,1,1);
@@ -120,3 +161,25 @@ plot(omegaD_REC(2,:))
 % hold on;
 % plot(omegaD_REC(2,:)*100)
 % plot(FullState(:,12)) %cmd theta
+%%
+figure()
+subplot(3,1,1)
+hold on
+plot(FullState(:,1),motorTorques(:,1))
+% plot(FullState(:,1),FullState(:,15))
+% legend("Roll Torque", "Roll")
+title("Proportional")
+
+subplot(3,1,2)
+hold on
+plot(FullState(:,1),motorTorques(:,2))
+% plot(FullState(:,1),FullState(:,14))
+% legend("Pitch Torque", "Pitch")
+title("Integral")
+
+subplot(3,1,3)
+hold on
+plot(FullState(:,1),motorTorques(:,3))
+% plot(FullState(:,1),FullState(:,16))
+% legend("Yaw Torque", "Yaw")
+title("Derivative")

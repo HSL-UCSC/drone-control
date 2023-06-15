@@ -5,22 +5,23 @@ classdef PID_Controller
                 
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
-            K_p = 350; %300
+            K_p = 300; %250
             K_i = 15; % 300,15,350 good
-            K_d = 450;
+            K_d = 350;
             
             % Proportional
             X_pid_err.x_curr_error = x_d - x;
             pid_p = K_p * X_pid_err.x_curr_error; 
             
             % Derivative
-            X_pid_err.deriv = -K_d*x_dot; % taking off minus sign
-            pid_d = X_pid_err.deriv;
+%             X_pid_err.deriv = -K_d*x_dot; % For non-changing references
+            X_pid_err.deriv = (X_pid_err.x_curr_error - X_pid.x_prev)/dt;
+            pid_d = K_d*X_pid_err.deriv;
             
             
             %Integral
-            X_pid_err.x_cumm_error = X_pid.x_cumm_error + K_i*dt*(X_pid_err.x_curr_error);
-            pid_i = X_pid_err.x_cumm_error;
+            X_pid_err.x_cumm_error = X_pid.x_cumm_error + dt*(X_pid_err.x_curr_error); %%%% K_i <= Take this term out, just cummulate error without it's multiplication. Then multiply after
+            pid_i = K_i*X_pid_err.x_cumm_error;
         
                 % Integral saturations
         %     if(pid_i > MAX_OUT)
@@ -46,22 +47,23 @@ classdef PID_Controller
             
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
-            K_p = 350; %300 % Shouldnt do anything with 100 (maybe 1 degree commanded)
+            K_p = 300; %250 % Shouldnt do anything with 100 (maybe 1 degree commanded)
             K_i = 15; 
-            K_d = 450; % 300,15,350 good
+            K_d = 350; % 300,15,350 good
             
             % Proportional
             Y_pid_err.y_curr_error = y_d - y;
             pid_p = K_p * Y_pid_err.y_curr_error; 
             
             % Derivative
-            Y_pid_err.deriv = -K_d*y_dot;
-            pid_d = Y_pid_err.deriv;
+%             Y_pid_err.deriv = -K_d*y_dot; % For non-changing references
+            Y_pid_err.deriv = (Y_pid_err.y_curr_error - Y_pid.y_prev)/dt;
+            pid_d = K_d*Y_pid_err.deriv;
             
             
             %Integral
-            Y_pid_err.y_cumm_error = Y_pid.y_cumm_error + K_i*dt*(Y_pid_err.y_curr_error);
-            pid_i = Y_pid_err.y_cumm_error;
+            Y_pid_err.y_cumm_error = Y_pid.y_cumm_error + dt*(Y_pid_err.y_curr_error);
+            pid_i = K_i*Y_pid_err.y_cumm_error;
             
                 % Integral saturations
         %     if(pid_i > MAX_OUT)
@@ -87,9 +89,9 @@ classdef PID_Controller
             
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
-            K_p = 200; % 300
-            K_i = 30; 
-            K_d = 120; % 300,30,120 good
+            K_p = 125; % 200
+            K_i = 75; 
+            K_d = 75; % 300,30,120 good
             
             % Proportional
             Z_pid_err.z_curr_error = z_d - z;
@@ -100,13 +102,16 @@ classdef PID_Controller
             %   Use (Z_pid_err.z_curr_error - Z_pid.z_curr_error) = (measurement - prevMeasurement) once we start changing the
 	        %   reference signal
         %     Z_pid_err.deriv = (2*K_d/(2*tau + dt))*(Z_pid_err.z_curr_error - Z_pid.z_curr_error) + ((2*tau - dt)/(2*tau + dt))*Z_pid.deriv;
-            Z_pid_err.deriv = -K_d*z_dot;
-            pid_d = Z_pid_err.deriv;
+
+            Z_pid_err.deriv = -z_dot;  % For non-changing references
+%             Z_pid_err.deriv = (Z_pid_err.z_curr_error - Z_pid.z_prev)/dt;
+            pid_d = K_d*Z_pid_err.deriv;
+            
             
             % Integral
         %     Z_pid_err.z_cumm_error = Z_pid.z_cumm_error + K_i*0.5*dt*(Z_pid_err.z_curr_error + Z_pid.z_curr_error);
-            Z_pid_err.z_cumm_error = Z_pid.z_cumm_error + K_i*dt*(Z_pid_err.z_curr_error);
-            pid_i = Z_pid_err.z_cumm_error;
+            Z_pid_err.z_cumm_error = Z_pid.z_cumm_error + dt*(Z_pid_err.z_curr_error);
+            pid_i = K_i*Z_pid_err.z_cumm_error;
             
             % Integral saturations
         %     if(pid_i > MAX_OUT)
@@ -123,8 +128,7 @@ classdef PID_Controller
             pid_output = [pid_p, pid_i, pid_d];
             
             T = pid_p + pid_i + pid_d;
-%             T = uint8(min(max(0,T), 255));
-            T = min(max(0,T), 255);
+            T = uint8(min(max(0,T), 255));
             
             
             
@@ -185,6 +189,7 @@ classdef PID_Controller
         function Z_pid = Zpid_init(reset_pid, OUT_FREQ, CUT_OFF_FREQ_POS)
             persistent z_curr_error
             persistent z_cumm_error % This is unique to Z controller
+            persistent z_prev
             persistent vz_curr_error
             persistent vz_cumm_error
             persistent vz_prev
@@ -195,6 +200,7 @@ classdef PID_Controller
             if reset_pid == 1
                 z_curr_error = 0.0;
                 z_cumm_error = 0.0;
+                z_prev = 0.0;
                 vz_curr_error = 0.0;
                 vz_cumm_error = 0.0;
                 vz_prev = 0.0;
@@ -203,6 +209,7 @@ classdef PID_Controller
             
             Z_pid.z_curr_error = z_curr_error;
             Z_pid.z_cumm_error = z_cumm_error;
+            Z_pid.z_prev = z_prev;
             Z_pid.vz_curr_error = vz_curr_error;
             Z_pid.vz_cumm_error = vz_cumm_error;
             Z_pid.vz_prev = vz_prev;

@@ -56,17 +56,21 @@ mocapHandle.init(dllPath)
 commsHandle = Communications();
 
 % Create bluetooth connection
-% b = ble("C02835321733"); % ST DRONE FRAME 1
-b = ble("C0286e325133"); % ST DRONE FRAME 2
+b = ble("C02835321733"); % ST DRONE FRAME 1
+% b = ble("C0286e325133"); % ST DRONE FRAME 2
 ble_imu_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00E00000-0001-11E1-AC36-0002A5D5C51B"); % Read IMU
 ble_arm_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "20000000-0001-11E1-AC36-0002A5D5C51B"); % Read arming status
-% ble_bat_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "001D0000-0001-11E1-AC36-0002A5D5C51B"); % Read battery/pressure status
+ble_bat_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "001D0000-0001-11E1-AC36-0002A5D5C51B"); % Read battery/pressure status
 
 subscribe(ble_imu_char)
 ble_imu_char.DataAvailableFcn = @saveImuData;
 
+% subscribe(ble_bat_char)
+% ble_bat_char.DataAvailableFcn = @saveBatData;
+
+
 % Open serial port for HC12 connection
-device = serialport("COM5",19200);%19200
+device = serialport("COM5",38400);%19200
 flush(device)
 
 
@@ -168,11 +172,23 @@ for i = 1:WARMUP
     
 end
 
+%% Battery level
+% d = zeros(1,12); % For reading IMU
+% timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
+% [d(1,:), timestamps(1)] = commsHandle.readBLE(ble_bat_char)
+% fprintf('Battery level: %f%%\n', d(1,1)/3); % divide by ration so 3.2 = 0%
+
 
 %% Wait for drone to be armed
 disp("Calibrate/arm drone to start autonomous flight")
 data = zeros(1,3); % For reading IMU
 timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
+
+
+controlMode = 0;
+% controlMode = 1;
+% commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_CM, controlMode);
+
 
 toggleArm = 0;
 while(1)
@@ -200,13 +216,6 @@ while(1)
 end
 
 
-%% Battery level
-% data = zeros(1,12); % For reading IMU
-% timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
-% [data(1,:), timestamps(1)] = commsHandle.readBLE(ble_bat_char)
-% fprintf('Battery level: %f%%\n', data(1,1)/3); % divide by ration so 3.2 = 0%
-
-
 %% Run Position Control Loop
 disp("Starting in 1 second...")
 % java.lang.Thread.sleep(1*1000);
@@ -225,6 +234,7 @@ Drone_rate_data = [];
 packetCount = [];
 ahrsRec = [];
 ahrsRec2 = [];
+ahrsRateRec = [];
 eulerCmdRec = [];
 thrusts = [];
 accRec = [];
@@ -234,12 +244,12 @@ yRefs = [];
 zRefs = [];
 Rhat = [];
 FullState = [];
-
+pidAtt_errors = [];
 commsFromDrone = [];
 error_code = [0];
 error_code2 = [0];
 error_code3 = [0];
-controlMode = 0;
+% controlMode = 0;
 landingFlag = 0;
 
 
@@ -247,6 +257,12 @@ global data;
 global timestamp;
 data = zeros(1,20); % For reading IMU
 timestamp = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
+
+global dataBat;
+global timestampBat;
+dataBat = zeros(1,12); % For reading IMU
+timestampBat = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
+
 rec = [];
 Tcmds = [];
 
@@ -338,8 +354,8 @@ while(1)
     
     % Convert the angles to 0 - 255
     slope_m = 255.0/(MAX_ANGLE - -MAX_ANGLE);
-    comm_phi_d = uint8(slope_m *(phi_d + MAX_ANGLE)) + roll_trim;
-    comm_theta_d = uint8(slope_m *(theta_d + MAX_ANGLE)) + pitch_trim;
+    comm_phi_d = uint8(slope_m *(phi_d + MAX_ANGLE));
+    comm_theta_d = uint8(slope_m *(theta_d + MAX_ANGLE));
     
     % Get latest xbox controller input
     xboxTime = tic;
@@ -384,26 +400,60 @@ while(1)
 
     % Send attitude command
     if(controlMode == 1)
-        rollCmdTruth = xbox_comm_roll;
-        pitchCmdTruth = xbox_comm_pitch;
-        yawCmdTruth = xbox_comm_yaw;
+        rollCmdTruth = (double(xbox_comm_roll)/255)*60 - 30;
+        pitchCmdTruth = (double(xbox_comm_pitch)/255)*60 - 30;
+        yawCmdTruth = (double(xbox_comm_yaw)/255)*60 - 30;
         commsHandle.sendAttitudeCmdPacket(device,xbox_comm_yaw,xbox_comm_thrust,xbox_comm_roll,xbox_comm_pitch);
     else
-        rollCmdTruth = comm_phi_d;
-        pitchCmdTruth = comm_theta_d;
-        yawCmdTruth = comm_yaw_d;
+        rollCmdTruth = phi_d;
+        pitchCmdTruth = theta_d;
+        yawCmdTruth = 0;
         commsHandle.sendAttitudeCmdPacket(device,comm_yaw_d,comm_thr_d,comm_phi_d,comm_theta_d);
     end
     wTimes(k) = toc(wTime);
 
 
+    % Thrust commands
+    Tcmds(k) = typecast(uint8(data(1, 1:2)), 'uint16')/10;
+    
+    % Store on-board attitude estimate
+    ahrsX_rate = commsHandle.parseBLE(data(1, 3:4),1000);%1
+    ahrsY_rate = commsHandle.parseBLE(data(1, 5:6),1000);
+    ahrsZ_rate = commsHandle.parseBLE(data(1, 7:8),1000);
+    ahrsRateRec(k,:) = [ahrsX_rate, ahrsY_rate, ahrsZ_rate]; % AHRS
 
 
-%      Store on-board attitude estimate
-     ahrsX = commsHandle.parseBLE(data(1, 3:4),10);%1
-     ahrsY = commsHandle.parseBLE(data(1, 5:6),10);
-     ahrsZ = commsHandle.parseBLE(data(1, 7:8),10);
-     ahrsRec(k,:) = [ahrsX, ahrsY, ahrsZ]; % AHRS
+    % Store on-board attitude estimate
+    ahrsX = ((data(1, 9) / 255) * 60) - 30;
+    ahrsY = ((data(1, 11) / 255) * 60) - 30;
+    ahrsZ = ((data(1, 13) / 255) * 60) - 30;
+    ahrsRec(k,:) = [ahrsX, ahrsY, ahrsZ]; % AHRS
+
+
+    pidX_error = ((data(1, 10) / 255) * 100) - 50;
+    pidY_error = ((data(1, 12) / 255) * 100) - 50;
+    pidZ_error = ((data(1, 14) / 255) * 100) - 50;
+    pidAtt_errors(k,:) = [pidX_error, pidY_error, pidZ_error]; % AHRS
+
+   
+    pidX_deriv = ((data(1, 15) / 255) * 100) - 50;
+    pidY_deriv = ((data(1, 17) / 255) * 100) - 50;
+    pidZ_deriv = ((data(1, 19) / 255) * 100) - 50;
+    pidAtt_derivatives(k,:) =  [pidX_deriv, pidY_deriv, pidZ_deriv];
+
+     
+    pidX_integ = ((data(1, 16) / 255) * 40) - 20;
+    pidY_integ = ((data(1, 18) / 255) * 40) - 20;
+    pidZ_integ = ((data(1, 20) / 255) * 40) - 20;
+    pidAtt_integrals(k,:) =  [pidX_integ, pidY_integ, pidZ_integ];
+
+
+
+
+%      ahrsX_Rate = commsHandle.parseBLE(dataBat(1, 7:8),10);%1
+%      ahrsY_Rate = commsHandle.parseBLE(dataBat(1, 9:10),10);
+%      ahrsZ_Rate = commsHandle.parseBLE(dataBat(1, 11:12),10);
+%      ahrsRateRec(k,:) = [ahrsX_Rate, ahrsY_Rate, ahrsZ_Rate]; % AHRS
 
     pwm1 = commsHandle.parseBLE(data(1,9:10),1);
     pwm2 = commsHandle.parseBLE(data(1,11:12),1);
@@ -417,25 +467,27 @@ while(1)
 %      attCmdZ = commsHandle.parseBLE(data(1,13:14),10);
 %      eulerCmdRec(k,:) = [attCmdX,attCmdY,attCmdZ]; % Commanded
 
-    Tcmds(k) = commsHandle.parseBLE(data(1,15:16),1);
 
      % Store packet count
-     packetCount(k) = commsHandle.parseBLE(data(1,17:18),1);
+     packetCount(k) = commsHandle.parseBLE(data(1,1:2),1);
 
      % Errir flag
-     error_code(k) = commsHandle.parseBLE(data(1,19:20),1);  % Sepflag - Transfer error
-     error_code2(k) = commsHandle.parseBLE(data(1,13:14),1); % Sepflag2 - FIFO error
-     error_code3(k) = commsHandle.parseBLE(data(1,11:12),1); % Sepflag3 - Direct Mode error
-
-     t1 = commsHandle.parseBLE(data(1,15:16),1);
-     t2 = commsHandle.parseBLE(data(1,17:18),1); 
-     t3 = commsHandle.parseBLE(data(1,19:20),1);
-     torques(k,:) =  [t1, t2, t3];
+%      error_code(k) = commsHandle.parseBLE(data(1,19:20),1);  % Sepflag - Transfer error
+%      error_code2(k) = commsHandle.parseBLE(data(1,13:14),1); % Sepflag2 - FIFO error
+%      error_code3(k) = commsHandle.parseBLE(data(1,11:12),1); % Sepflag3 - Direct Mode error
+% 
+%      t1 = commsHandle.parseBLE(data(1,15:16),1);
+%      t2 = commsHandle.parseBLE(data(1,17:18),1); 
+%      t3 = commsHandle.parseBLE(data(1,19:20),1);
+%      torques(k,:) =  [t1, t2, t3];
 
      
     % Tylers data % --- (now - initTime)*100000
+
+%     ahrsX_Rate,ahrsY_Rate,ahrsZ_Rate,
     totalTime = totalTime + dT; 
-    FullState(k,:) = [totalTime, x_ref,y_ref,z_ref,x_f,y_f,z_f,vx_f,vy_f,vz_f,rollCmdTruth,pitchCmdTruth,yawCmdTruth,ahrsX,ahrsY,ahrsZ,Drone_attitude_data(k,1),Drone_attitude_data(k,2),Drone_attitude_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
+%     FullState(k,:) = [totalTime, x_ref,y_ref,z_ref,x_f,y_f,z_f,vx_f,vy_f,vz_f,rollCmdTruth,pitchCmdTruth,yawCmdTruth,ahrsX,ahrsY,ahrsZ,Drone_attitude_data(k,1),Drone_attitude_data(k,2),Drone_attitude_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3),pwmSignals(k,1),pwmSignals(k,2),pwmSignals(k,3),pwmSignals(k,4)];
+    FullState(k,:) = [totalTime, x_ref,y_ref,z_ref,x_f,y_f,z_f,vx_f,vy_f,vz_f,pitchCmdTruth,rollCmdTruth,yawCmdTruth,Tcmds(k),ahrsX,ahrsY,ahrsZ,ahrsX_rate,ahrsY_rate,ahrsZ_rate,pidX_error,pidY_error,pidZ_error,pidX_deriv,pidY_deriv,pidZ_deriv,pidX_integ,pidY_integ,pidZ_integ,X_pid.x_curr_error,Y_pid.y_curr_error,Z_pid.z_curr_error,X_pid.deriv,Y_pid.deriv,Z_pid.deriv,X_pid.x_cumm_error,Y_pid.y_cumm_error,Z_pid.z_cumm_error,Drone_attitude_data(k,1),Drone_attitude_data(k,2),Drone_attitude_data(k,3),Drone_rate_data(k,1),Drone_rate_data(k,2),Drone_rate_data(k,3)];
     
     
     % Collect the data being sent
@@ -448,7 +500,7 @@ while(1)
     % Sleep delay 
     s = tic;
 % %     java.lang.Thread.sleep(5); % 5ms delay
-    pause(0.005)
+    pause(0.02); %0.02 (40HZ)  0.005 (100Hz)
 
     sleepTimes(k) = toc(s);
 
@@ -491,6 +543,16 @@ function saveImuData(src,evt)
     global timestamp;
     [data,timestamp] = read(src,'oldest');
 end
+
+
+function saveBatData(src,evt)
+    global dataBat;
+    global timestampBat;
+    [dataBat,timestampBat] = read(src,'oldest');
+end
+
+
+
 
 
 

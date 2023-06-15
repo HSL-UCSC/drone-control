@@ -31,6 +31,14 @@ classdef Communications < handle
             end
         end
 
+%         function [out] = parseBLEhalf(obj, data, scale) % Scale is for decimal precision (choose what was chosen at the firmware level)
+%             if(data(2) < 128)
+%                 out = (256*data(2) + data(1))/scale;
+%             else
+%                 out = -((256*(255 - data(2)) + (256-data(1))))/scale;
+%             end
+%         end
+
         function packet = sendAttitudeCmdPacket(obj,device,yaw,thrust,roll,pitch)
             % Build attitude command packet
             packet = [obj.startByte, yaw, thrust, roll, pitch, obj.endByte]

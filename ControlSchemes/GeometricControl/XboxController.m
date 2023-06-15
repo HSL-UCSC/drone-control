@@ -4,6 +4,11 @@ classdef XboxController < handle
         cntrlStatePtr = 0;
         cntrlId = 0;
 
+        thumbLYOff = 0;
+        thumbLXOff = 0;
+        thumbRYOff = 0;
+        thumbRXOff = 0;
+
         XINPUT_GAMEPAD_B = 0x2000;                  % Manual override switch
         XINPUT_GAMEPAD_LEFT_SHOULDER = 0x0100;      % Calibration switch
         XINPUT_GAMEPAD_RIGHT_SHOULDER = 0x0200;     % Arming switch
@@ -52,6 +57,13 @@ classdef XboxController < handle
             elseif(calllib('XInput1_4','XInputGetState',3,obj.cntrlStatePtr) == 0)
                 obj.cntrlId = 3;
             end
+
+            % Determine joystick offsets
+            obj.thumbLYOff = obj.cntrlState.Gamepad.sThumbLY;
+            obj.thumbLXOff = obj.cntrlState.Gamepad.sThumbLX;
+            obj.thumbRYOff = obj.cntrlState.Gamepad.sThumbRY;
+            obj.thumbRXOff = obj.cntrlState.Gamepad.sThumbRX;
+
         end
 
         function [thrust,yaw,pitch,roll,calibrate,arm,override,land,setpointMode,setpointPrev,setpointNext] = getState(obj)
@@ -59,10 +71,10 @@ classdef XboxController < handle
             calllib('XInput1_4','XInputGetState',obj.cntrlId,obj.cntrlStatePtr);
             
             % Parse controller input into flight control command
-            thrust = min(max(obj.cntrlState.Gamepad.sThumbLY / 128.5, 0), 255);
-            yaw = min(max(((obj.cntrlState.Gamepad.sThumbLX + 32768)*60 / 65536 - 30), -30), 30);
-            pitch = -min(max(((obj.cntrlState.Gamepad.sThumbRY + 32768)*60 / 65536 - 30),-30), 30);
-            roll = min(max(((obj.cntrlState.Gamepad.sThumbRX + 32768)*60 / 65536 - 30), -30), 30);
+            thrust = min(max((obj.cntrlState.Gamepad.sThumbLY - obj.thumbLYOff) / 128.5, 0), 255);
+            yaw = min(max((((obj.cntrlState.Gamepad.sThumbLX - obj.thumbLXOff) + 32768)*60 / 65536 - 30), -30), 30);
+            pitch = -min(max((((obj.cntrlState.Gamepad.sThumbRY - obj.thumbRYOff) + 32768)*60 / 65536 - 30),-30), 30);
+            roll = min(max((((obj.cntrlState.Gamepad.sThumbRX - obj.thumbRXOff) + 32768)*60 / 65536 - 30), -30), 30);
 
             % Manual override switch
             override = 0;
