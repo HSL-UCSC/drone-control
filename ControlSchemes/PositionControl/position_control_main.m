@@ -8,15 +8,15 @@ ExperimentNum = 0;
 DroneNum = 0;
 ExperimentType = "P";
 
-load("AFOSR_Results\1-C_Metadata.mat",'ExperimentNum','DroneNum','ExperimentType');   
-ExperimentNum = ExperimentNum + 1;
-expStr = int2str(ExperimentNum);
-droneStr = int2str(DroneNum);
-filename = sprintf("AFOSR_Results/%s-%s_Metadata", droneStr, ExperimentType);
-save(filename, 'ExperimentNum', 'DroneNum', 'ExperimentType');
-timeNow = "mm-dd-yy_HH-MM";
-filenameDate = datestr(now, timeNow);
-filename = sprintf("AFOSR_Results/%s-%s-%s_%s",droneStr,ExperimentType,expStr, filenameDate);
+% load("AFOSR_Results\1-C_Metadata.mat",'ExperimentNum','DroneNum','ExperimentType');   
+% ExperimentNum = ExperimentNum + 1;
+% expStr = int2str(ExperimentNum);
+% droneStr = int2str(DroneNum);
+% filename = sprintf("AFOSR_Results/%s-%s_Metadata", droneStr, ExperimentType);
+% save(filename, 'ExperimentNum', 'DroneNum', 'ExperimentType');
+% timeNow = "mm-dd-yy_HH-MM";
+% filenameDate = datestr(now, timeNow);
+% filename = sprintf("AFOSR_Results/%s-%s-%s_%s",droneStr,ExperimentType,expStr, filenameDate);
 
 
 % 2-C-3_mm-dd-yy_HH-MM
@@ -70,7 +70,7 @@ ble_imu_char.DataAvailableFcn = @saveImuData;
 
 
 % Open serial port for HC12 connection
-device = serialport("COM5",38400);%19200
+device = serialport("COM3",38400);%19200
 flush(device)
 
 
