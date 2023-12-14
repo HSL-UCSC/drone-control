@@ -1,8 +1,8 @@
-classdef PID_Controller 
+classdef PID_Controller
     methods     ( Static = true )
         function [x_acc_d, pid_output, X_pid_err] = Xcontroller(X_pid, x_d, x, x_dot, dt)
             MAX_ACC = 900; % Max acceleration using thrust=value(0,255) assuming thrust>=thrustTrim(140)
-                
+            
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
             K_p = 300; %250
@@ -11,7 +11,7 @@ classdef PID_Controller
             
             % Proportional
             X_pid_err.x_curr_error = x_d - x;
-            pid_p = K_p * X_pid_err.x_curr_error; 
+            pid_p = K_p * X_pid_err.x_curr_error;
             
             % Derivative
             X_pid_err.deriv = -K_d*x_dot; % taking off minus sign
@@ -21,14 +21,14 @@ classdef PID_Controller
             %Integral
             X_pid_err.x_cumm_error = X_pid.x_cumm_error + K_i*dt*(X_pid_err.x_curr_error);
             pid_i = X_pid_err.x_cumm_error;
-        
-                % Integral saturations
-        %     if(pid_i > MAX_OUT)
-        %         pid_i = MAX_OUT;
-        %     end
-        %     if(pid_i < -MAX_OUT)
-        %         pid_i = -MAX_OUT;
-        %     end
+            
+            % Integral saturations
+            %     if(pid_i > MAX_OUT)
+            %         pid_i = MAX_OUT;
+            %     end
+            %     if(pid_i < -MAX_OUT)
+            %         pid_i = -MAX_OUT;
+            %     end
             
             % Store previous error
             X_pid_err.x_prev = X_pid_err.x_curr_error;
@@ -47,12 +47,12 @@ classdef PID_Controller
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
             K_p = 300; %250 % Shouldnt do anything with 100 (maybe 1 degree commanded)
-            K_i = 15; 
+            K_i = 15;
             K_d = 350; % 250,15,350 good
             
             % Proportional
             Y_pid_err.y_curr_error = y_d - y;
-            pid_p = K_p * Y_pid_err.y_curr_error; 
+            pid_p = K_p * Y_pid_err.y_curr_error;
             
             % Derivative
             Y_pid_err.deriv = -K_d*y_dot;
@@ -63,13 +63,13 @@ classdef PID_Controller
             Y_pid_err.y_cumm_error = Y_pid.y_cumm_error + K_i*dt*(Y_pid_err.y_curr_error);
             pid_i = Y_pid_err.y_cumm_error;
             
-                % Integral saturations
-        %     if(pid_i > MAX_OUT)
-        %         pid_i = MAX_OUT;
-        %     end
-        %     if(pid_i < -MAX_OUT)
-        %         pid_i = -MAX_OUT;
-        %     end
+            % Integral saturations
+            %     if(pid_i > MAX_OUT)
+            %         pid_i = MAX_OUT;
+            %     end
+            %     if(pid_i < -MAX_OUT)
+            %         pid_i = -MAX_OUT;
+            %     end
             
             % Store previous error
             Y_pid_err.y_prev = Y_pid_err.y_curr_error;
@@ -88,33 +88,33 @@ classdef PID_Controller
             %% -------------------- FIRST PID BLOCK ------------------------------
             % Gains
             K_p = 250; % 200
-            K_i = 30; 
+            K_i = 30;
             K_d = 120; % 200,30,120 good
             
             % Proportional
             Z_pid_err.z_curr_error = z_d - z;
-            pid_p = K_p * Z_pid_err.z_curr_error; 
+            pid_p = K_p * Z_pid_err.z_curr_error;
             
             % Derivative
-	        % ***NOTE***
+            % ***NOTE***
             %   Use (Z_pid_err.z_curr_error - Z_pid.z_curr_error) = (measurement - prevMeasurement) once we start changing the
-	        %   reference signal
-        %     Z_pid_err.deriv = (2*K_d/(2*tau + dt))*(Z_pid_err.z_curr_error - Z_pid.z_curr_error) + ((2*tau - dt)/(2*tau + dt))*Z_pid.deriv;
+            %   reference signal
+            %     Z_pid_err.deriv = (2*K_d/(2*tau + dt))*(Z_pid_err.z_curr_error - Z_pid.z_curr_error) + ((2*tau - dt)/(2*tau + dt))*Z_pid.deriv;
             Z_pid_err.deriv = -K_d*z_dot;
             pid_d = Z_pid_err.deriv;
             
             % Integral
-        %     Z_pid_err.z_cumm_error = Z_pid.z_cumm_error + K_i*0.5*dt*(Z_pid_err.z_curr_error + Z_pid.z_curr_error);
+            %     Z_pid_err.z_cumm_error = Z_pid.z_cumm_error + K_i*0.5*dt*(Z_pid_err.z_curr_error + Z_pid.z_curr_error);
             Z_pid_err.z_cumm_error = Z_pid.z_cumm_error + K_i*dt*(Z_pid_err.z_curr_error);
             pid_i = Z_pid_err.z_cumm_error;
             
             % Integral saturations
-        %     if(pid_i > MAX_OUT)
-        %         pid_i = MAX_OUT;
-        %     end
-        %     if(pid_i < -MAX_OUT)
-        %         pid_i = -MAX_OUT;
-        %     end
+            %     if(pid_i > MAX_OUT)
+            %         pid_i = MAX_OUT;
+            %     end
+            %     if(pid_i < -MAX_OUT)
+            %         pid_i = -MAX_OUT;
+            %     end
             
             % Store previous error
             Z_pid_err.z_prev = Z_pid_err.z_curr_error;
@@ -128,9 +128,9 @@ classdef PID_Controller
             
             
             % Saturations
-        %     output_n = min(max(0.001, output_z), MAX_OUT); % Apply saturations from 0-3(N)
-        %     output_n = output_n*(MAX_T/MAX_OUT); % Convert to 0-255
-        %     T = uint8(output_n);
+            %     output_n = min(max(0.001, output_z), MAX_OUT); % Apply saturations from 0-3(N)
+            %     output_n = output_n*(MAX_T/MAX_OUT); % Convert to 0-255
+            %     T = uint8(output_n);
             
         end
         function X_pid = Xpid_init(reset_pid, OUT_FREQ, CUT_OFF_FREQ_POS)
@@ -157,7 +157,7 @@ classdef PID_Controller
             X_pid.deriv = deriv;
             X_pid.lpf_data = lpf_data;
         end
-        function Y_pid = Ypid_init(reset_pid, OUT_FREQ, CUT_OFF_FREQ_POS)  
+        function Y_pid = Ypid_init(reset_pid, OUT_FREQ, CUT_OFF_FREQ_POS)
             persistent y_curr_error
             persistent vy_curr_error
             persistent y_cumm_error
@@ -208,6 +208,6 @@ classdef PID_Controller
             Z_pid.deriv = deriv;
             Z_pid.lpf_data = lpf_data;
         end
-
+        
     end
 end
