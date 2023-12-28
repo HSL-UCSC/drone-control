@@ -8,9 +8,9 @@ classdef Communications < handle
         endByte_DataUpdate = 10;
 
         % Packet commands
-        DR_UPDATE_ARM = 1;
-        DR_UPDATE_CAL = 2;
-        DR_UPDATE_CM = 3;
+        ARM = 1;
+        CALIBRATION  = 2;
+        CONTROL_MODE  = 3;
 
         % BLE characteristic
         %         ble_imu_char = characteristic(b, "00000000-0001-11E1-9AB4-0002A5D5C51B" , "00E00000-0001-11E1-AC36-0002A5D5C51B"); % Read IMU
