@@ -7,8 +7,7 @@ classdef (Abstract) Reader
 
     methods (Abstract)
 
-        function [data, t] = read(obj, char)
-        end
+        [data, t] = read(obj, char)
 
     end
 

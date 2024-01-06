@@ -8,16 +8,16 @@ classdef PositionController
 
     methods
 
-        function obj = PositionController(x_gains, y_gains, z_gains, sample_frequency, cutoff_frequency)
+        function obj = PositionController(sample_frequency, cutoff_frequency, x_gains, y_gains, z_gains)
 
             arguments
+                sample_frequency int = 60;
+                cutoff_frequency int = 10;
+
                 x_gains Gains = Gains(300, 15, 300);
                 y_gains Gains = Gains(300, 15, 300);
                 z_gains Gains = Gains(250, 30, 120);
-
-                sample_frequency int = 60;
-                cutoff_frequency int = 10;
-            end
+           end
 
             obj.x_pid = PID(x_gains.kp, x_gains.ki, x_gains.kd, sample_frequency, cutoff_frequency);
             obj.y_pid = PID(y_gains.kp, y_gains.ki, y_gains.kd, sample_frequency, cutoff_frequency);

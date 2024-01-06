@@ -7,8 +7,7 @@ classdef (Abstract) Writer
 
     methods (Abstract)
 
-        function packet = write(obj, packet)
-        end
+        packet = write(obj, packet)
 
     end
 
