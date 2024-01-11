@@ -66,7 +66,7 @@ subscribe(ble_imu_char)
 ble_imu_char.DataAvailableFcn = @saveImuData;
 
 % Open serial port for HC12 connection
-device = serialport("COM5",38400);%19200
+device = serialport("COM3",38400);%19200
 flush(device)
 
 
