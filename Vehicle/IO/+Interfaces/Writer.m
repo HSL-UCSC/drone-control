@@ -1,8 +1,8 @@
-classdef (Abstract) Writer
+classdef (Abstract) Writer < handle
     % Writer interface for implementing general communications interfaces
 
     properties
-        inititialized bool
+        inititialized = false;
     end
 
     methods (Abstract)

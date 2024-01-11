@@ -1,8 +1,8 @@
-classdef (Abstract) Reader
+classdef (Abstract) Reader < handle
     % Reader interface for implementing general communications interfaces
 
     properties
-        inititialized bool
+        inititialized = false;
     end
 
     methods (Abstract)

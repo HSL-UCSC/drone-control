@@ -4,11 +4,11 @@ clc;
 close all;
 
 % Lab Environment Setup
-motion_capture = OptitrackNatNet()
+motion_capture = OptitrackNatNet();
+disp("Motion capture interface initialized")
 
 % Load XBox Controller
 xboxControllerHandle = XboxController();
-xboxControllerHandle.init()
 calibrate = 0; arm = 0; override = 0; land = 0; setpointMode = 0; setpointPrev = 0; setpointNext = 0;
 disp("Generated Xbox controller interface")
 
@@ -26,11 +26,11 @@ CUT_OFF_FREQ_POS = 10;
 m = 69.89/1000;
 MAX_ANGLE = 30.0; % 27.73;
 
-hc12_writer = HC12Writer("COM3", 38400)
-ble_reader = BLEReader("C02835321733")
+hc12_writer = HC12Writer("COM3", 38400);
+ble_reader = BLEReader("C02835321733");
 disp("Successfully established bluetooth and hc12 connections")
 
-position_controller = PositionController(OUT_FREQ, CUT_OFF_FREQ_VEL)
+position_controller = PositionController(OUT_FREQ, CUT_OFF_FREQ_VEL);
 
 lazyflie = LazyFlie(ble_reader, hc12_writer, position_controller);
 
@@ -46,6 +46,8 @@ timestamps = datetime(zeros(1, 1), 0, 0); %a 10x1 array of datetime
 controlMode = 0;
 landingFlag = 0;
 toggleArm = 0;
+
+return
 
 % TODO: move this into a vehicle arming loop
 ble_arming_data = zeros(1, 3); % For reading IMU

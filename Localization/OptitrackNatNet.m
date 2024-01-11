@@ -3,7 +3,7 @@ classdef OptitrackNatNet <  Interfaces.Localizer & handle
     properties
         client;
         drone_id;
-        filter FilterInterface;
+        filter Filter;
         last_x;
         last_y;
         last_z;
@@ -96,7 +96,6 @@ classdef OptitrackNatNet <  Interfaces.Localizer & handle
                 filtered bool = false
             end
 
-            import Filter.Interfaces.
             % This function will get the data from Motive and extract the x, y, z
             % coordinates from the incoming data.
 

@@ -1,4 +1,4 @@
-classdef Filter < Interfaces.Filter
+classdef LowPassFilter < Interfaces.Filter
 
     properties
         coefficients
@@ -6,7 +6,7 @@ classdef Filter < Interfaces.Filter
     end
     methods
 
-        function obj = Filter(sample_frequency, cut_frequency, start_sample)
+        function obj = LowPassFilter(sample_frequency, cut_frequency, start_sample)
             fr = sample_frequency / cut_frequency;
             ohm = tan(pi / fr);
             c = 1 + 2 * cos(pi / 4) * ohm + ohm * ohm;

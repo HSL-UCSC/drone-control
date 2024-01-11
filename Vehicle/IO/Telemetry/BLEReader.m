@@ -2,7 +2,7 @@ classdef BLEReader < Interfaces.Reader & handle
 
     properties
         initialized = false;
-        ble_connection = nil;
+        ble_connection;
     end
 
     methods
