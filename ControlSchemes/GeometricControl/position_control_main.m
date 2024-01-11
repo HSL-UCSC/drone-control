@@ -190,7 +190,7 @@ data = zeros(1,3); % For reading IMU
 timestamps = datetime(zeros(1,1), 0, 0); %a 10x1 array of datetime
 
 controlMode = 0;
-% commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_CM, controlMode);
+% commsHandle.sendDataUpdatePacket(device,commsHandle.CONTROL_MODE , controlMode);
 
 toggleArm = 0;
 while(1)
@@ -207,11 +207,11 @@ while(1)
         setpointMode,setpointPrev,setpointNext] = xboxControllerHandle.getState();
     if(arm && ~prevArm)
         disp("Arming")
-        commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_ARM, 1);
+        commsHandle.sendDataUpdatePacket(device,commsHandle.ARM, 1);
     end
     if(calibrate && ~prevCalibrate)
         disp("Calibrating")
-        commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_CAL, 1);
+        commsHandle.sendDataUpdatePacket(device,commsHandle.CALIBRATION , 1);
     end
 
     pause(0.1);
@@ -430,16 +430,16 @@ while(1)
     if(override && ~prevOverride)
         disp("Toggling override")
         controlMode = xor(controlMode,1); % Toggle AOMC (0) and MOMC (1)
-        commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_CM, controlMode);
+        commsHandle.sendDataUpdatePacket(device,commsHandle.CONTROL_MODE , controlMode);
     end
     if(arm && ~prevArm)
         disp("Toggling arm command")
         toggleArm = xor(toggleArm,1);
-        commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_ARM, toggleArm);
+        commsHandle.sendDataUpdatePacket(device,commsHandle.ARM, toggleArm);
     end
     if(calibrate && ~prevCalibrate)
         disp("Calibrating")
-        commsHandle.sendDataUpdatePacket(device,commsHandle.DR_UPDATE_CAL, 1);
+        commsHandle.sendDataUpdatePacket(device,commsHandle.CALIBRATION , 1);
     end
     if(land && ~prevLand)
         disp("Beginning landing sequence")
