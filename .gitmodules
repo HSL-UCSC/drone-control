@@ -1,0 +1,3 @@
+[submodule "Localization/vision"]
+	path = Localization/vision
+	url = https://github.com/HSL-UCSC/vision.git
