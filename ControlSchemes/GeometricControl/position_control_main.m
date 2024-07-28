@@ -378,13 +378,6 @@ while(1)
     
     % Saturate Omega_d
     comm_Omega_d = min(max(-0.5, comm_Omega_d), 0.5);
-
-    
-
-
-
-
-
     
     % Get latest xbox controller input
     xboxTime = tic;
@@ -534,7 +527,7 @@ while(1)
 %     Rreceived(3,2) = commsHandle.parseBLE(data(1, 17:18),1000);
 %     Rreceived(3,3) = commsHandle.parseBLE(data(1, 19:20),1000);
     
-%     OmegaReceived = [];
+%   OmegaReceived = [];
     OmegaReceived(1) = commsHandle.parseBLE(data(1, 15:16),1000);%1
     OmegaReceived(2) = commsHandle.parseBLE(data(1, 17:18),1000);
     OmegaReceived(3) = commsHandle.parseBLE(data(1, 19:20),1000);%%%%%%%%%%%%%%%%

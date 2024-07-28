@@ -88,7 +88,7 @@ classdef OptitrackNatNet <  Interfaces.Localizer & handle
         end
 
         % TODO:
-        function [time_stamp, x, y, z, pitch, roll, yaw] = get_position(obj, drone_id, filtered)
+        function [x, y, z, pitch, roll, yaw, time_stamp] = get_position(obj, drone_id, filtered)
 
             arguments
                 obj

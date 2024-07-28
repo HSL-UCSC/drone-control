@@ -10,33 +10,78 @@ classdef Lazyflie < Interfaces.Multirotor
 
     methods
 
-        function obj = Lazyflie(ble_address, com_port, baud_rate, control_writer, state_reader)
+        function obj = Lazyflie(ble_address, com_port, baud_rate)
 
             arguments
                 ble_address string
                 com_port string
                 baud_rate int = 38400;
-                control_writer Interfaces.Writer = nil;
-                state_reader Interfaces.Reader = nil;
             end
 
-            % TODO: handle case of non-nil reader/writer to support dependency injection
-            obj.control_writer = BLEReader(ble_address);
-            obj.state_reader = HC12Writer(com_port, baud_rate);
+            obj.state_reader = BLEReader(ble_address);
+            obj.control_writer = HC12Writer(com_port, baud_rate);
 
         end
 
-        function armed = arm()
+        function initialize(obj)
+
+            for loop_index = 1:inf
+                % Check if status onboard is armed
+
+                if obj.is_armed() == 1
+                    break;
+                end
+
+                % todo: initialize not implemented. CG needs RC handle for this initialization loop to make sense
+                return;
+                % Check xbox input and send arm command when 'RB' is pressed
+                prevCalibrate = calibrate; prevArm = arm; prevOverride = override; prevLand = land; prevSetpointMode = setpointMode; prevSetpointPrev = setpointPrev; prevSetpointNext = setpointNext;
+                [xbox_comm_thrust, xbox_comm_yaw, xbox_comm_pitch, xbox_comm_roll, calibrate, arm, override, land, ...
+                     setpointMode, setpointPrev, setpointNext] = xboxControllerHandle.getState();
+
+                if (arm && ~prevArm)
+                    disp("Arming")
+                    obj.arm();
+                end
+
+                if (calibrate && ~prevCalibrate)
+                    disp("Calibrating")
+                    obj.calibrate();
+                end
+
+                pause(0.1);
+            end
+
+            % Initialize the lazyflie
+            obj.initialized = true;
+        end
+
+        function armed = arm(obj)
             % set arming status
 
             % read arming status
-            armed = obj.is_armed
+            armed = obj.is_armed();
+
+            if (armed == 1)
+                obj.armed = true;
+                return
+            end
+
+            % todo: check for error condition
+            obj.control_writer.write(obj.dataUpdatePacket(obj.ARM, 1));
+            % if no error, set armed to true
+            obj.armed = true;
         end
 
-        function armed = is_armed()
+        function armed = is_armed(obj)
             % read arming status
+            armed = lazyFlie.state_reader.read(ble_arm_char);
+            return;
+        end
 
-            armed = obj.is_armed
+        function calibrate(obj)
+            % calibrate the lazyflie
+            obj.control_writer.write(obj.dataUpdatePacket(obj.CALIBRATION, 1));
         end
 
         % TODO: read doesn't return timestamps, best I can tell
@@ -90,24 +135,14 @@ classdef Lazyflie < Interfaces.Multirotor
         end
 
         % TODO: get rc controller input, autopilot input as arguments
-        function control()
-            
-            % Send attitude command
-            if (controlMode == 0)
-                rollCmdTruth = (double(xbox_comm_roll) / 254) * 60 - 30;
-                pitchCmdTruth = (double(xbox_comm_pitch) / 254) * 60 - 30;
-                yawCmdTruth = (double(xbox_comm_yaw) / 254) * 60 - 30;
-                attitude_command_packet = obj.attitudePacket(xbox_comm_yaw, xbox_comm_thrust, xbox_comm_roll, xbox_comm_pitch)
-                obj.write(attitude_command_packet);
-            else
-                rollCmdTruth = phi_d;
-                pitchCmdTruth = theta_d;
-                yawCmdTruth = -1;
-                attitude_command_packet = obj.attitudePacket(comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d);
-                obj.control_writer.write(attitude_command_packet);
-            end
+        function control(obj, comm_thr_d, comm_phi_d, comm_theta_d, comm_yaw_d)
 
-       end
+            % Send attitude command
+            % todo: RC interface
+            attitude_command_packet = obj.attitudePacket(comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d);
+            obj.control_writer.write(attitude_command_packet);
+
+        end
 
         % TODO: necessary to clear?
         function shutdown()

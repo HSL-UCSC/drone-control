@@ -6,7 +6,7 @@ classdef (Abstract) Localizer < handle
 
     methods (Abstract)
         % TODO: strong preference for t at the end
-        [t, x, y, z, phi, theta, psi] = get_position(obj, id, filtered)
+        [x, y, z, phi, theta, psi] = get_position(obj, id, filtered)
         success = connect(obj)
         success = disconnect(obj)
         % [t, x_dot, y_dot, z_dot, phi_dot, theta_dot, psi_dot] = get_velocity(obj, id, filtered)

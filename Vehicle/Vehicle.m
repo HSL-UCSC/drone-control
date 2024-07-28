@@ -1,22 +1,32 @@
 classdef (Abstract) Vehicle
 
+    properties
+        x
+        y
+        z
+        u
+        v
+        w
+        phi
+        theta
+        psi
+        p
+        q
+        r
+        armed
+        mode
+    end
+
     methods (Abstract)
         
-        function obj = initialize(obj)
-        end
-        
-        function mode = control_mode(obj)
-        end
-
+        obj = initialize(obj)     
+        mode = control_mode(obj)
+   
         % get vehicle state 12 vector
-        function state = state(obj)
-        end
-
-        % set a position target, can be three or six?
-        function set_position_target(obj, position)
-        end
-        % 
-        
+        [x, y, z, u, v, w, phi, theta, psi, p, q, r] = state(obj)
+        control = control(obj, thrust, phi, theta, psi)
+        armed = arm(obj)
+        disarmed = disarm(obj)
     end
 end
 

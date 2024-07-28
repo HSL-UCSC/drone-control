@@ -4,7 +4,8 @@ classdef PID < handle
         kp
         ki
         kd
-        
+        max
+        min
         current_error
         previous_error
         cumulative_error
@@ -14,15 +15,16 @@ classdef PID < handle
 
     methods
 
-        function obj = PID(kp, ki, kd, sample_frequency, cutoff_frequency)
+        function obj = PID(kp, ki, kd, min, max, sample_frequency, cutoff_frequency)
 
             arguments
-                kp float
-                ki float
-                kd float
-
-                sample_frequency int8
-                cutoff_frequency int8
+                kp
+                ki
+                kd
+                min
+                max
+                sample_frequency
+                cutoff_frequency
             end
 
             obj.kp = kp;
@@ -33,6 +35,9 @@ classdef PID < handle
             obj.previous_error = 0;
             obj.v_current_error = 0;
             obj.cumulative_error = 0;
+            obj.min = min;
+            obj.max = max;
+
             % obj.filter = Filter.lpf_2_init(sample_frequency, cutoff_frequency, 0.0);
         end
 
@@ -65,7 +70,7 @@ classdef PID < handle
             % Final PID result
             pid_outputs = [pid_p, pid_i, pid_d];
             target_acceleration = pid_p + pid_i + pid_d;
-            target_acceleration = min(max(-MAX_ACC, target_acceleration), MAX_ACC); 
+            target_acceleration = min(max(obj.min, target_acceleration), obj.max); 
         end
     end
 

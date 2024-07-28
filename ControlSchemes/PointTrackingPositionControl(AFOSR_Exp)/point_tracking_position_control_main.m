@@ -410,8 +410,6 @@ while(1)
     wTimes(k) = toc(wTime);
     
 
-
-
 %      Store on-board attitude estimate
      ahrsX = commsHandle.parseBLE(data(1, 3:4),10);%1
      ahrsY = commsHandle.parseBLE(data(1, 5:6),10);
