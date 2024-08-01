@@ -1,3 +1,6 @@
+if not(isfolder('../yamlmatlab'))
+    !git clone https://github.com/ewiger/yamlmatlab.git ../yamlmatlab/
+end
 if not(isfolder('../vision'))
     !git clone https://github.com/hsl-UCSC/vision.git ../vision/
 end
