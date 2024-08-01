@@ -1,0 +1,19 @@
+control: position
+vehicles:
+  - quadsim1:
+      model: Quadsim
+      localization: SimVehicle
+  - quadsim2:
+      model: Quadsim
+      localization: SimVehicle
+  - lazyflie:
+      model: Lazyflie
+      reader:
+        ble-address: ""
+      writer: 
+        port: "COM3"
+        baud: 38400
+      controller: PositionController
+  - mob7:
+      model: Betaflight
+      writer:
