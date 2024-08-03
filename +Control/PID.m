@@ -65,7 +65,7 @@ classdef PID < handle
             % Final PID result
             component_outputs = [pid_p, pid_i, pid_d];
             output = pid_p + pid_i + pid_d;
-            output = min(max(obj.saturate_min, target_acceleration), obj.saturate_max);
+            output = min(max(obj.saturate_min, output), obj.saturate_max);
         end
     end
     
