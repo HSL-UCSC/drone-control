@@ -7,20 +7,27 @@ classdef CyberTXWriter < Interfaces.Writer & handle
 
     methods
 
-        function obj = CyberTXWriter(com_port, baud_rate, num_channels)
-            obj.client = CyberTX(com_port, baud_rate, num_channels);
+        function obj = CyberTXWriter(com_port, baud_rate, line, num_channels)
+            obj.client = CyberTX(com_port, baud_rate, line, num_channels);
         end
 
         % todo: double check against CyberTX matlab
-        function packet = write(obj, packet)
-            obj.client.writePPM(packet);
+        function command = write(obj, command)
+            obj.client.writePPM([command.Aileron, command.Elevator, command.Throttle, command.Rudder]);
         end
-
     end
 
-    methods(static)
-        function obj = Command(aileron, elevator, throttle, rudder, arm, mode)
-            obj = struct('Aileron', aileron, 'Elevator', elevator, 'Throttle', throttle, 'Rudder', rudder, 'Arm', arm, 'Mode', mode);
+    methods(Static)
+        function command = Command(aileron, elevator, throttle, rudder, arm, mode)
+            aileron = max(1000, min(2000, cast(aileron, 'uint16')));
+            elevator = max(1000, min(2000, cast(elevator, 'uint16')));
+            throttle = max(1000, min(2000, cast(throttle, 'uint16')));
+            rudder = max(1000, min(2000, cast(rudder, 'uint16')));
+
+            % todo: nargin check for arm, mode
+            % command = struct('Aileron', aileron, 'Elevator', elevator, 'Throttle', throttle, 'Rudder', rudder, 'Arm', arm, 'Mode', mode);
+            command = struct('Aileron', aileron, 'Elevator', elevator, 'Throttle', throttle, 'Rudder', rudder);
+
         end
     end
 

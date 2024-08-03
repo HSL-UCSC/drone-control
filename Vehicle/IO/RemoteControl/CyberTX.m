@@ -16,12 +16,12 @@ classdef CyberTX < handle
                 line = 1; % Default line
             end
             if nargin < 4
-                num_channels = 8; % Default channels
+                num_channels = 4; % Default channels
             end
+            obj.num_channels = num_channels;
             obj.routing_bits = log2(obj.num_channels);
             obj.port = serialport(port, baud_rate);
             obj.line = line;
-            obj.num_channels = num_channels;
         end
         
         function writePPM(obj, ppmValues)
@@ -43,8 +43,8 @@ classdef CyberTX < handle
                 MSB = cast(bitshift(MSB, -8), 'uint8');
                 LSB = cast(LSB, 'uint8');
                 
-                dec2bin(MSB, 8)
-                dec2bin(LSB, 8)
+                dec2bin(MSB, 8);
+                dec2bin(LSB, 8);
                 
                 write(obj.port, MSB, 'uint8');
                 write(obj.port, LSB, 'uint8');
