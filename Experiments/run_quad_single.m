@@ -1,12 +1,13 @@
 % function position_control_main = position_control_main(in1, in2)
-% clear;
+clear;
 % clc;
 % close all;
-clear motion_capture;
 
 % Lab Environment Setup
 % todo: implement swith to select one of Vicon or Optitrack
-motion_capture = SimVehicle("localhost", 25001);
+motion_capture = Vicon.Client();
+motion_capture.initialize();
+
 disp("Motion capture interface initialized")
 
 % waypoints handle is a concrete implementation of the Path interface
@@ -20,18 +21,18 @@ CUT_OFF_FREQ_VEL = 10;
 CUT_OFF_FREQ_POS = 10;
 
 % Mass of the drone
-% TODO!!!!!!: match mass of quad under test - set this in vehicle model implementations 
-m = 1000;
-MAX_ANGLE = 10.0;
+% TODO!!!!!!: match mass of quad under test - set this in vehicle model implementations
+vehicle = Betaflight("COM24", 115200);
+m = 60;
+MAX_ANGLE = 15.0;
 
-position_controller = PositionController(OUT_FREQ, CUT_OFF_FREQ_VEL);
+position_controller = Control.PositionController(OUT_FREQ, CUT_OFF_FREQ_VEL);
 
 % % todo: consider moving this to the LazyFlie constructor
 % lazyflie = LazyFlie("COM3", 38400, "C02835321733", position_controller);
 % disp("Successfully established bluetooth and hc12 connections")
 % disp("Calibrate/arm drone to start autonomous flight")
 
-vehicle = Quadsim();
 
 %% SET POINT TO TRACK
 [x_ref, y_ref, z_ref] = waypointsHandle.get_waypoint();
@@ -53,7 +54,10 @@ T_trim = .5;
 roll_trim = 0;
 pitch_trim = 0;
 
-[xprev, yprev, zprev, phiprev, thetaprev, psiprev] = motion_capture.get_position();
+vehicle_state = motion_capture.get_pose("mob6", "mob6");
+p = vehicle_state.translation;
+R = vehicle_state.rotation;
+[xprev, yprev, zprev, phiprev, thetaprev, psiprev] = deal(p{1}, -p{2}, p{3}, R{1}, R{2}, R{3});
 
 % configure control loop rate
 rate_controller = rateControl(control_frequency_hz);
@@ -66,24 +70,27 @@ for loop_index = 1:inf
     end
 
     if vehicle.armed == 0
-        disp("Drone disarmed, exiting control loop")
-        continue;
+        res = input('');
+        disp(res);
+        vehicle.armed = 1;
     end
 
     % Get new drone position and store
-    [x, y, z, phi, theta, psi] = motion_capture.get_position(1, true);
-
+    vehicle_state = motion_capture.get_pose("mob6", "mob6");
+    p = vehicle_state.translation;
+    R = vehicle_state.rotation;
+    [x, y, z, phi, theta, psi] = deal(p{1}, -p{2}, p{3}, R{1}, R{2}, R{3});
     % TODO: should always get reference from waypoint generator, all logic should be subsumed there
     % TODO: implement landing logic in waypoint generator
     [x_ref, y_ref, z_ref] = waypointsHandle.get_waypoint([x, y, z, phi, theta, psi], landingFlag);
 
     comm_thr_d = gTHR + T_trim;
-    [ddot_x_d, ddot_y_d, gTHR] = position_controller.control([x_ref, y_ref, z_ref], [x, y, z], dT);
+    [ddot_x_d, ddot_y_d, gTHR] = position_controller.control([x_ref, y_ref, z_ref], [x/1000, y/1000, z/1000], dT);
 
     % TODO: yaw control
     % Calculate desired roll,pitch angles - From Harsh Report
     % psi = vehicle_state(7); % yaw
-    phi_d = -m / single(comm_thr_d) * (ddot_x_d * cos(psi) + ddot_y_d * sin(psi)) * 180 / pi; % MIGHT NEED TO REPLACE comm_thr_d with actual thrust sent to actuators on drone
+    phi_d = -m / single(comm_thr_d) * (ddot_x_d * cos(psi) + ddot_y_d * sin(psi)) * 180 / pi;
     theta_d = m / single(comm_thr_d) * (-ddot_y_d * cos(psi) + ddot_x_d * sin(psi)) * 180 / pi;
 
     % saturate roll and pitch angles
@@ -97,7 +104,7 @@ for loop_index = 1:inf
     %{
         TODO: implement UI handler. Process commands like start, stop
     %}
-    vehicle.control(comm_phi_d, comm_theta_d, psi_d, z_ref);
+    vehicle.control(z_ref, comm_phi_d, comm_theta_d, psi_d);
     xprev = x;
     yprev = y;
     zprev = z;
