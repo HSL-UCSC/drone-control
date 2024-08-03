@@ -6,8 +6,7 @@ classdef (Abstract) Multirotor < Interfaces.Vehicle
 
     methods (Abstract)
         arm()
-        is_armed()
-        shutdown()
+        disarm()
     end
 
 end
