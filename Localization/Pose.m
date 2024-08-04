@@ -31,7 +31,7 @@ classdef Pose
 		end
 		
 		function obj = setRotation(obj, phi, theta, psi)
-			% Method to set the ation components
+			% Method to set the rotation components
 			obj.phi = rx;
 			obj.theta = ry;
 			obj.psi = rz;

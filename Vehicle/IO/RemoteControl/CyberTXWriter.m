@@ -11,7 +11,6 @@ classdef CyberTXWriter < Interfaces.Writer & handle
             obj.client = CyberTX(com_port, baud_rate, line, num_channels);
         end
 
-        % todo: double check against CyberTX matlab
         function command = write(obj, command)
             obj.client.writePPM([command.Aileron, command.Elevator, command.Throttle, command.Rudder]);
         end
@@ -19,6 +18,15 @@ classdef CyberTXWriter < Interfaces.Writer & handle
 
     methods(Static)
         function command = Command(aileron, elevator, throttle, rudder, arm, mode)
+            arguments
+                aileron
+                elevator
+                throttle
+                rudder
+                arm = 0
+                mode = 0
+            end
+
             aileron = max(1000, min(2000, cast(aileron, 'uint16')));
             elevator = max(1000, min(2000, cast(elevator, 'uint16')));
             throttle = max(1000, min(2000, cast(throttle, 'uint16')));

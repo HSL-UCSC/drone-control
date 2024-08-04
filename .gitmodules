@@ -1,3 +1,6 @@
 [submodule "Localization/vision"]
 	path = Localization/vision
 	url = https://github.com/HSL-UCSC/vision.git
+[submodule "QuadSim"]
+	path = QuadSim
+	url = https://github.com/friend0/QuadSim.git

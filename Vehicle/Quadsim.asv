@@ -1,7 +1,7 @@
 classdef Quadsim < Interfaces.Multirotor
   
   properties
-    mass_kg = .1;
+    mass_kg = 1;
     armed=1;
     control_mode="manual"
     id
@@ -70,9 +70,9 @@ classdef Quadsim < Interfaces.Multirotor
         
     function control(obj, thrust, phi, theta, psi)
       % Define the data to be sent (4 values)
-      % phi = min(max(phi, -deg2rad(20)), deg2rad(20));
-      % theta = min(max(theta, -deg2rad(20)), deg2rad(20));
-      % thrust = min(max(thrust, 0), 1);
+      phi = min(max(phi, -deg2rad(20)), deg2rad(20));
+      theta = min(max(theta, -deg2rad(20)), deg2rad(20));
+      thrust = min(max(thrust, 0), 1);
 
       data = [phi, theta, psi, thrust];
       dataToSend = typecast(double(data), 'uint8');

@@ -135,10 +135,18 @@ classdef Lazyflie < Interfaces.Multirotor
         end
 
         % TODO: get rc controller input, autopilot input as arguments
-        function control(obj, comm_thr_d, comm_phi_d, comm_theta_d, comm_yaw_d)
+        function control(obj, comm_thr_d, comm_phi_d, comm_theta_d, comm_yaw_d, MAX_ANGLE)
+            arguments
+                obj
+                comm_thr_d (1, 1) double
+                comm_phi_d (1, 1) double
+                comm_theta_d (1, 1) double
+                comm_yaw_d (1, 1) double
+                MAX_ANGLE = 12.0
+            end
 
-            % Send attitude command
-            % todo: RC interface
+            comm_phi_d = min(max(-MAX_ANGLE, comm_phi_d), MAX_ANGLE);
+            comm_theta_d = min(max(-MAX_ANGLE, comm_theta_d), MAX_ANGLE);
             attitude_command_packet = obj.attitudePacket(comm_yaw_d, comm_thr_d, comm_phi_d, comm_theta_d);
             obj.control_writer.write(attitude_command_packet);
 

@@ -10,8 +10,8 @@ ports = serialportlist
 vehicle = Quadsim('127.0.0.1', 25000, 'sim1');
 vehicles = [vehicle];
 motion_capture = QuadsimMotionCapture(vehicles);
-waypointsHandle = Path.EventPath([.7 0 .7]);
-control_frequency_hz = 120;
+waypointsHandle = Path.EventPath([3 0 3]);
+control_frequency_hz = 40;
 dT = 1 / control_frequency_hz;
 
 
@@ -75,10 +75,9 @@ while 1
 
     % TODO: yaw control
     % Calculate desired roll,pitch angles - From Harsh Report
-    % phi_d = -vehicle.mass_kg / single(comm_thr_d) * (ddot_x_d * cos(psi) + ddot_y_d * sin(psi)) * 180/pi;
-    % theta_d = vehicle.mass_kg / single(comm_thr_d) * (-ddot_y_d * cos(psi) + ddot_x_d * sin(psi)) * 180/pi;
-    phi_d = -vehicle.mass_kg / single(comm_thr_d) * (ddot_y_d * cos(psi) - ddot_x_d * sin(psi));
-    theta_d = vehicle.mass_kg / single(comm_thr_d) * (ddot_x_d * cos(psi) + ddot_y_d * sin(psi));
+    phi_d = -vehicle.mass_kg / single(comm_thr_d) * (ddot_x_d * cos(psi) - ddot_y_d * sin(psi)) * 180/pi;
+    theta_d = vehicle.mass_kg / single(comm_thr_d) * (-ddot_y_d * cos(psi) + ddot_x_d * sin(psi)) * 180/pi;
+
     %{
         TODO: implement UI handler. Process commands like start, stop
     %}
