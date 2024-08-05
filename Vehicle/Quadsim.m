@@ -56,8 +56,9 @@ classdef Quadsim < Interfaces.Multirotor
             % disp([p, q, r, phi, theta, psi, u, v, w, x, y, z])
             if length(res) >= 1
                 data = typecast(res.Data(1:12), 'double');
-                pose.translation = {data(10), data(11), data(12)};
-                pose.rotation = {data(4), data(5), data(6)};
+                pose.translation = [data(10), data(11), data(12)];
+                pose.rotation = [data(4), data(5), data(6)];
+                pose.velocity = [data(7), data(8), data(9)];
                 src.UserData = pose;
                 % [p, q, r, phi, theta, psi, u, v, w, x, y, z] = deal(data(1), data(2), data(3), data(4), data(5), data(6), data(7), data(8), data(9), data(10), data(11), data(12)) ;
             end
