@@ -26,11 +26,7 @@ classdef PositionController
         
         function [ax, ay, az] = control(obj, target_state, current_state, dt)
             
-            % x_err = (x_ref - x);
-            % y_err = (y_ref - y);
-            %
-            % x_vd = (x_err * cos(psi) + y_err * sin(psi));
-            % y_vd = (y_err * cos(psi) - x_err * sin(psi));
+            
             
             % x_err = (target_state(1) - current_state(1));
             % y_err = (target_state(2) - current_state(2));

@@ -28,16 +28,16 @@ classdef QuadsimMotionCapture <  Localization.Interfaces.Localizer & handle
         end
         
         function pose = get_pose(obj, subject, segment, filtered)
-            arguments
-                obj
-                subject
-                segment = ""
-                filtered = false
-            end
-            udp = obj.vehicles(subject).udprx;
-            pose.translation = udp.UserData.translation;
-            pose.rotation = udp.UserData.rotation;
-            pose.velocity = udp.UserData.velocity;
+          arguments
+            obj
+            subject
+            segment = ""
+            filtered = false
+          end
+          udp = obj.vehicles(subject).udprx;
+          pose.translation = udp.UserData.translation;
+          pose.rotation = udp.UserData.rotation;
+          pose.velocity = udp.UserData.velocity;
         end
         
     end
