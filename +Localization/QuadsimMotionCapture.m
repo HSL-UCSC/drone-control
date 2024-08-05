@@ -1,4 +1,4 @@
-classdef QuadsimMotionCapture <  Interfaces.Localizer & handle
+classdef QuadsimMotionCapture <  Localization.Interfaces.Localizer & handle
     
     properties
         vehicles;
@@ -19,24 +19,25 @@ classdef QuadsimMotionCapture <  Interfaces.Localizer & handle
         end
         
         function success = shutdown(obj)
-          obj.client.Uninitialize();
-          success = true;
+            obj.client.Uninitialize();
+            success = true;
         end
         
         function register_vehicle(obj, vehicle)
-          obj.vehicles(vehicle.id) = vehicle;
+            obj.vehicles(vehicle.id) = vehicle;
         end
         
         function pose = get_pose(obj, subject, segment, filtered)
-          arguments
-            obj
-            subject
-            filtered = false
-          end
-          udp = obj.vehicles(subject).udprx;
-          pose.translation = udp.UserData.translation;
-          pose.rotation = udp.UserData.rotation;
-          pose.velocity = udp.UserData.velocity;
+            arguments
+                obj
+                subject
+                segment = ""
+                filtered = false
+            end
+            udp = obj.vehicles(subject).udprx;
+            pose.translation = udp.UserData.translation;
+            pose.rotation = udp.UserData.rotation;
+            pose.velocity = udp.UserData.velocity;
         end
         
     end
