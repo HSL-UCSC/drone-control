@@ -1,4 +1,4 @@
-classdef QuadsimMotionCapture <  Interfaces.Localizer & handle
+classdef QuadsimMotionCapture <  Localization.Interfaces.Localizer & handle
     
     properties
         vehicles;
@@ -31,6 +31,7 @@ classdef QuadsimMotionCapture <  Interfaces.Localizer & handle
           arguments
             obj
             subject
+            segment = ""
             filtered = false
           end
           udp = obj.vehicles(subject).udprx;

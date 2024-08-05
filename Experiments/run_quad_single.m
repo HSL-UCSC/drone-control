@@ -74,10 +74,10 @@ while 1
   x_err = (x_ref - x);
   y_err = (y_ref - y);
   
-  x_vd = -(x_err * cos(psi) + y_err * sin(psi));
-  y_vd = (y_err * cos(psi) + x_err * sin(psi));
+  x_vd = (x_err * cos(psi) + y_err * sin(psi));
+  y_vd = (y_err * cos(psi) - x_err * sin(psi));
   
-  [theta_d, phi_d, gTHR] = position_controller.control([u, v, w], [x_vd, y_vd, z], dT);
+  [theta_d, phi_d, gTHR] = position_controller.control([-u, v, w], [-x_vd, y_vd, z], dT);
   comm_thr_d = 38 + gTHR + T_trim;
   
   % TODO: yaw control
