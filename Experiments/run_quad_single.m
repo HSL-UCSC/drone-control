@@ -3,7 +3,7 @@ clear vehicles vehicle;
 ports = serialportlist
 
 % Lab Environment Setup
-% vehicle = Betaflight("COM24", 115200, .060);
+% vehicle = Betaflight("COM24", 115200);
 % motion_capture = Vicon.Client();
 
 %% make the vehicle id the same name as motion capture EZ
@@ -71,24 +71,14 @@ while 1
   % TODO: implement landing logic in waypoint generator
   [x_ref, y_ref, z_ref] = waypointsHandle.get_waypoint([x, y, z, phi, theta, psi], landingFlag);
   
-  x_err = (x_ref - x);
-  y_err = (y_ref - y);
-  
-  x_vd = (x_err * cos(psi) + y_err * sin(psi));
-  y_vd = (y_err * cos(psi) - x_err * sin(psi));
-  
-  [theta_d, phi_d, gTHR] = position_controller.control([-u, v, w], [-x_vd, y_vd, z], dT);
+  [theta_d, phi_d, gTHR] = position_controller.control([x_ref, y_ref, z_ref], [x, y z, phi, theta, psi, u, v, w], dT);
   comm_thr_d = 38 + gTHR + T_trim;
-  
-  % TODO: yaw control
-  % Calculate desired roll,pitch angles - From Harsh Report
-  % phi_d = -vehicle.mass_kg / single(comm_thr_d) * (ddot_x_d * cos(psi) + ddot_y_d * sin(psi)) * 180/pi;
-  % theta_d = vehicle.mass_kg / single(comm_thr_d) * (-ddot_y_d * cos(psi) + ddot_x_d * sin(psi)) * 180/pi;
   
   %{
         TODO: implement UI handler. Process commands like start, stop
   %}
-  vehicle.control(z_ref, phi_d, theta_d, psi_d);
+  % positive pitch commands travel in negative x, so reverse it here 
+  vehicle.control(z_ref, phi_d, -theta_d, psi_d);
   % Sleep until next loop
   waitfor(rate_controller);
 end

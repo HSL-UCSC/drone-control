@@ -26,25 +26,28 @@ classdef PositionController
         
         function [ax, ay, az] = control(obj, target_state, current_state, dt)
             
-            % x_err = (x_ref - x);
-            % y_err = (y_ref - y);
-            %
-            % x_vd = (x_err * cos(psi) + y_err * sin(psi));
-            % y_vd = (y_err * cos(psi) - x_err * sin(psi));
+            psi = current_state(6);
+            ud = current_state(7);
+            vd = current_state(8);
+            wd = current_state(9);
+            
+            x_err = (target_state(1) - current_state(1));
+            y_err = (target_state(2) - current_state(2));
+            
+            x_vd = (x_err * cos(psi) + y_err * sin(psi));
+            y_vd = (y_err * cos(psi) - x_err * sin(psi));
             
             % x_err = (target_state(1) - current_state(1));
             % y_err = (target_state(2) - current_state(2));
             %
             % xd_b = (target_state(1) * cos(psi) + target_state(2) * sin(psi));
             % yd_b = (target_state(2) * cos(psi) - target_state(1) * sin(psi));
-            % zd_b = (target_state(3) - current_state(3));
-            %
             %
             % x_b = (current_state(1) * cos(psi) + current_state(2) * sin(psi));
             % y_b = (current_state(2) * cos(psi) - current_state(1) * sin(psi));
             
-            [ax, ~] = obj.x_pid.control(target_state(1), current_state(1), dt);
-            [ay, ~] = obj.y_pid.control(target_state(2), current_state(2), dt);
+            [ax, ~] = obj.x_pid.control(ud, x_vd, dt);
+            [ay, ~] = obj.y_pid.control(vd, y_vd, dt);
             [az, ~] = obj.z_pid.control(target_state(3), current_state(3), dt);
         end
         
