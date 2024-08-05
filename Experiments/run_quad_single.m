@@ -9,8 +9,8 @@ ports = serialportlist
 %% make the vehicle id the same name as motion capture EZ
 vehicle = Quadsim('127.0.0.1', 25000, 'sim1');
 vehicles = [vehicle];
-motion_capture = QuadsimMotionCapture(vehicles);
-waypointsHandle = Path.EventPath([.7 0 .7]);
+motion_capture = Localization.QuadsimMotionCapture(vehicles);
+waypointsHandle = Path.EventPath([.7 .7 .7]);
 control_frequency_hz = 120;
 dT = 1 / control_frequency_hz;
 
@@ -38,59 +38,59 @@ disp("Arm the vehicle. Starting control loop in 5 seconds")
 vehicle.arm()
 pause(1);
 
-T_trim = .2;
+T_trim = .4;
 roll_trim = 0;
 pitch_trim = 0;
 
 vehicle_state = motion_capture.get_pose(vehicle.id);
 p = vehicle_state.translation;
 R = vehicle_state.rotation;
-[xprev, yprev, zprev, phiprev, thetaprev, psiprev] = deal(p{1}, p{2}, p{3}, R{1}, R{2}, R{3});
+[xprev, yprev, zprev, phiprev, thetaprev, psiprev] = deal(p(1), p(2), p(3), R(1), R(2), R(3));
 
 % configure control loop rate
 rate_controller = rateControl(control_frequency_hz);
 waitfor(rate_controller);
-gTHR = 38;
+gTHR = .4;
 
 while 1
-
-    dT = rate_controller.LastPeriod;
-
-    if vehicle.armed == 0
-        res = input('');
-        disp(res);
-        vehicle.armed = 1;
-    end
-
-    % Get new drone position and store
-    vehicle_state = motion_capture.get_pose(vehicle.id);
-    p = vehicle_state.translation;
-    R = vehicle_state.rotation;
-    [x, y, z, phi, theta, psi] = deal(p{1}, p{2}, p{3}, R{1}, R{2}, R{3});
-    % TODO: implement landing logic in waypoint generator
-    [x_ref, y_ref, z_ref] = waypointsHandle.get_waypoint([x, y, z, phi, theta, psi], landingFlag);
-
-    [ddot_x_d, ddot_y_d, gTHR] = position_controller.control([x_ref, y_ref, z_ref], [x, y, z], dT);
-    comm_thr_d = 38 + gTHR + T_trim;
-
-    % TODO: yaw control
-    % Calculate desired roll,pitch angles - From Harsh Report
-    % phi_d = -vehicle.mass_kg / single(comm_thr_d) * (ddot_x_d * cos(psi) + ddot_y_d * sin(psi)) * 180/pi;
-    % theta_d = vehicle.mass_kg / single(comm_thr_d) * (-ddot_y_d * cos(psi) + ddot_x_d * sin(psi)) * 180/pi;
-    phi_d = -vehicle.mass_kg / single(comm_thr_d) * (ddot_y_d * cos(psi) - ddot_x_d * sin(psi));
-    theta_d = vehicle.mass_kg / single(comm_thr_d) * (ddot_x_d * cos(psi) + ddot_y_d * sin(psi));
-    %{
+  
+  dT = rate_controller.LastPeriod;
+  
+  if vehicle.armed == 0
+    res = input('');
+    disp(res);
+    vehicle.armed = 1;
+  end
+  
+  % Get new drone position and store
+  vehicle_state = motion_capture.get_pose(vehicle.id);
+  p = vehicle_state.translation;
+  R = vehicle_state.rotation;
+  v = vehicle_state.velocity;
+  [x, y, z, phi, theta, psi, u, v, w] = deal(p(1), p(2), p(3), R(1), R(2), R(3), v(1), v(2), v(3));
+  % TODO: implement landing logic in waypoint generator
+  [x_ref, y_ref, z_ref] = waypointsHandle.get_waypoint([x, y, z, phi, theta, psi], landingFlag);
+  
+  x_err = (x_ref - x);
+  y_err = (y_ref - y);
+  
+  x_vd = -(x_err * cos(psi) + y_err * sin(psi));
+  y_vd = (y_err * cos(psi) + x_err * sin(psi));
+  
+  [theta_d, phi_d, gTHR] = position_controller.control([u, v, w], [x_vd, y_vd, z], dT);
+  comm_thr_d = 38 + gTHR + T_trim;
+  
+  % TODO: yaw control
+  % Calculate desired roll,pitch angles - From Harsh Report
+  % phi_d = -vehicle.mass_kg / single(comm_thr_d) * (ddot_x_d * cos(psi) + ddot_y_d * sin(psi)) * 180/pi;
+  % theta_d = vehicle.mass_kg / single(comm_thr_d) * (-ddot_y_d * cos(psi) + ddot_x_d * sin(psi)) * 180/pi;
+  
+  %{
         TODO: implement UI handler. Process commands like start, stop
-    %}
-    vehicle.control(z_ref, phi_d, theta_d, psi_d);
-    xprev = x;
-    yprev = y;
-    zprev = z;
-    phiprev = phi;
-    thetaprev = theta;
-    psiprev = psi;
-    % Sleep until next loop
-    waitfor(rate_controller);
+  %}
+  vehicle.control(z_ref, phi_d, theta_d, psi_d);
+  % Sleep until next loop
+  waitfor(rate_controller);
 end
 
 % Shut off drone
