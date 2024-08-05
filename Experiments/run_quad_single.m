@@ -9,7 +9,7 @@ ports = serialportlist
 %% make the vehicle id the same name as motion capture EZ
 vehicle = Quadsim('127.0.0.1', 25000, 'sim1');
 vehicles = [vehicle];
-motion_capture = QuadsimMotionCapture(vehicles);
+motion_capture = Localization.QuadsimMotionCapture(vehicles);
 waypointsHandle = Path.EventPath([.7 0 .7]);
 control_frequency_hz = 120;
 dT = 1 / control_frequency_hz;
@@ -45,7 +45,7 @@ pitch_trim = 0;
 vehicle_state = motion_capture.get_pose(vehicle.id);
 p = vehicle_state.translation;
 R = vehicle_state.rotation;
-[xprev, yprev, zprev, phiprev, thetaprev, psiprev] = deal(p{1}, p{2}, p{3}, R{1}, R{2}, R{3});
+[xprev, yprev, zprev, phiprev, thetaprev, psiprev] = deal(p(1), p(2), p(3), R(1), R(2), R(3));
 
 % configure control loop rate
 rate_controller = rateControl(control_frequency_hz);
@@ -66,7 +66,7 @@ while 1
     vehicle_state = motion_capture.get_pose(vehicle.id);
     p = vehicle_state.translation;
     R = vehicle_state.rotation;
-    [x, y, z, phi, theta, psi] = deal(p{1}, p{2}, p{3}, R{1}, R{2}, R{3});
+    [x, y, z, phi, theta, psi] = deal(p(1), p(2), p(3), R(1), R(2), R(3));
     % TODO: implement landing logic in waypoint generator
     [x_ref, y_ref, z_ref] = waypointsHandle.get_waypoint([x, y, z, phi, theta, psi], landingFlag);
 
