@@ -1,7 +1,7 @@
-classdef LowPass
+classdef LowPass < handle
 
   properties
-    alpha
+    a
     y
   end
 
@@ -10,17 +10,21 @@ classdef LowPass
     % LowPass constructor
     % alpha: filter coefficient. If u is relatively noise free, set alpha close to unity. 
     % If u is noisy, set alpha close to zero.
-    function obj = LowPass(alpha)
-      if alpha < 0 || alpha > 1
-        error('Alpha must be between 0 and 1');
+    function obj = LowPass(smoothing)
+      if smoothing < 0 || smoothing > 1
+        error('cutoff must be greater than 0');
       end
-      obj.alpha = alpha;
+      obj.a = smoothing;
       obj.y = 0;
     end
 
     function y = filter(obj, u)
-      obj.y = (1 - obj.alpha) * obj.y + obj.alpha * u;
-      y = obj.y;
+    if obj.y == 0
+        obj.y = u;
+    end
+      alpha = obj.a;
+      y = (alpha * u) + (1 - alpha) * obj.y;
+      obj.y = y;
     end
   end
 
