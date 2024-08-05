@@ -1,4 +1,4 @@
-classdef PositionController
+classdef VelocityController
     
     properties
         x_pid
@@ -25,9 +25,9 @@ classdef PositionController
         end
         
         function [ax, ay, az] = control(obj, target_state, current_state, dt)
-            [ax, ~] = obj.x_pid.control(target_state(1), current_state(1), dt);
-            [ay, ~] = obj.y_pid.control(target_state(2), current_state(2), dt);
-            [az, ~] = obj.z_pid.control(target_state(3), current_state(3), dt);
+          [ax, ~] = obj.x_pid.control(target_state(1), current_state(1), dt);
+          [ay, ~] = obj.y_pid.control(target_state(2), current_state(2), dt);
+          [az, ~] = obj.z_pid.control(target_state(3), current_state(3), dt);
         end
         
     end
