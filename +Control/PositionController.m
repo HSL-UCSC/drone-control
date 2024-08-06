@@ -14,8 +14,8 @@ classdef PositionController
                 sample_frequency = 60;
                 cutoff_frequency = 10;
                 
-                x_gains = Control.Gains(.2, 0, .09);
-                y_gains = Control.Gains(.2, 0, .09);
+                x_gains = Control.Gains(.2, 0, .1);
+                y_gains = Control.Gains(.2, 0, .1);
                 z_gains = Control.Gains(2, 0, -1);
             end
             
