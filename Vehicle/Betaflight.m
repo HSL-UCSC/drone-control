@@ -6,20 +6,23 @@ classdef Betaflight < Interfaces.Multirotor
         initialized = false;
         armed = false;
         control_writer;
+        id
     end
 
     methods
 
-        function obj = Betaflight(com_port, baud_rate, line, channels)
+        function obj = Betaflight(com_port, baud_rate, id, line, channels)
 
             arguments
                 com_port
                 baud_rate = 115200;
+                id = "";
                 line = 1;
                 channels = 4;
             end
 
             % TODO: handle case of non-nil reader/writer to support dependency injection
+            obj.id = id;
             obj.control_writer = CyberTXWriter(com_port, baud_rate, line, channels);
 
         end
