@@ -10,7 +10,7 @@ motion_capture = Vicon.Client();
 % vehicle = Quadsim('127.0.0.1', 25000, 'sim1');
 % vehicles = [vehicle];
 % motion_capture = Localization.QuadsimMotionCapture(vehicles);
-waypointsHandle = Path.EventPath([0 0 .25]);
+waypointsHandle = Path.EventPath([0 0 .3]);
 control_frequency_hz = 120;
 dT = 1 / control_frequency_hz;
 
@@ -38,7 +38,7 @@ disp("Arm the vehicle. Starting control loop in 5 seconds")
 vehicle.arm()
 pause(1);
 
-T_trim = .65;
+T_trim = .4;
 roll_trim = 0;
 pitch_trim = 0;
 
@@ -80,14 +80,14 @@ while 1
   [x_ref, y_ref, z_ref] = waypointsHandle.get_waypoint([x, y, z, phi, theta, psi], landingFlag);
   
   [theta_d, phi_d, gTHR] = position_controller.control([x_ref, y_ref, z_ref], [x, y z, phi, theta, psi, u, v, w], dT);
-  gTHR = gTHR + T_trim;
+  % gTHR = gTHR + T_trim;
   
   %{
         TODO: implement UI handler. Process commands like start, stop
   %}
   % positive pitch commands travel in negative x, so reverse it here
 
-  vehicle.control(gTHR, phi_d, theta_d, psi_d);
+  vehicle.control(gTHR, -phi_d, -theta_d, psi_d);
   as = [as; [phi, theta, psi]];
   ah = [ah; [phi_d, -theta_d, psi_d]];
   % Sleep until next loop
