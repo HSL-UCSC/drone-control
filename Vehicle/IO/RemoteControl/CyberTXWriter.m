@@ -27,11 +27,6 @@ classdef CyberTXWriter < Interfaces.Writer & handle
                 mode = 0
             end
 
-            aileron = max(1000, min(2000, cast(aileron, 'uint16')));
-            elevator = max(1000, min(2000, cast(elevator, 'uint16')));
-            throttle = max(1000, min(2000, cast(throttle, 'uint16')));
-            rudder = max(1000, min(2000, cast(rudder, 'uint16')));
-
             % todo: nargin check for arm, mode
             % command = struct('Aileron', aileron, 'Elevator', elevator, 'Throttle', throttle, 'Rudder', rudder, 'Arm', arm, 'Mode', mode);
             command = struct('Aileron', aileron, 'Elevator', elevator, 'Throttle', throttle, 'Rudder', rudder);

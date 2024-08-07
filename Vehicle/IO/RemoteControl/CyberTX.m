@@ -1,35 +1,28 @@
-% todo: come up with a sustainable way to add this module to the project from it's CyberTX root instead of copying it here
-% make it a module, or add it to the matlab project
 classdef CyberTX < handle
     properties
         routing_bits
-        port
-        baud_rate
         line
         num_channels
+        port
     end
     
     methods
         % allow configurable number of channels
-        function obj = CyberTX(port, baud_rate, line, num_channels)
-            if nargin < 3
-                line = 1; % Default line
-            end
-            if nargin < 4
-                num_channels = 4; % Default channels
-            end
+        function obj = CyberTX(port, baud, line, num_channels)
+            obj.line = line;
             obj.num_channels = num_channels;
             obj.routing_bits = log2(obj.num_channels);
-            obj.port = serialport(port, baud_rate);
-            obj.line = line;
+            obj.port = serialport(port, baud);
+            obj.writePPM([1500, 1500, 1000, 1500]);
         end
         
         function writePPM(obj, ppmValues)
             write(obj.port, 0x01, 'uint8');
             write(obj.port, 0x02, 'uint8');
-            write(obj.port, dec2hex(obj.num_channels, 2), 'uint8');     %indicate start of frame (0b1111111111111111)
+            write(obj.port, obj.num_channels, 'uint8');     %indicate start of frame (0b1111111111111111)
             
             for i=1:obj.num_channels
+                ppmValues(i) = int32(ppmValues(i));
                 %should probably check if ppmValues are greater than the 11-bit number
                 %we are expecting, with a range of 2047
                 
@@ -48,10 +41,10 @@ classdef CyberTX < handle
                 
                 write(obj.port, MSB, 'uint8');
                 write(obj.port, LSB, 'uint8');
-                write(obj.port, 0x0D, 'uint8');
+                write(obj.port, 0x15, 'uint8');
             end
-            write(obj.port, 0x0D, 'uint8')
-            write(obj.port, 0x04, 'uint8')
+            write(obj.port, 0x15, 'uint8')
+            write(obj.port, 0x12, 'uint8')
         end
         
         function delete(obj)
@@ -60,10 +53,14 @@ classdef CyberTX < handle
     end
 end
 
+
+
 % delete(obj.port)
 % obj.port = serialport("COM3", 38400);
 % obj.port.flush()
 % configureTerminator(obj.port);
+
+
 
 % Packet is 4 bits of routing data supporting 16 channels of ppm, with 11
 % bits of data allowing values between 0 and 2047

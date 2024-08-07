@@ -14,9 +14,9 @@ classdef PositionController
                 sample_frequency = 60;
                 cutoff_frequency = 10;
                 
-                x_gains = Control.Gains(.2, 0, .1);
-                y_gains = Control.Gains(.2, 0, .1);
-                z_gains = Control.Gains(2, 0, -1);
+                x_gains = Control.Gains(.35, .1, .1);
+                y_gains = Control.Gains(.35, .1, .1);
+                z_gains = Control.Gains(1.5, .1, .2);
             end
             
             obj.x_pid = Control.PID(x_gains.kp, x_gains.ki, x_gains.kd, -12, 12, sample_frequency, cutoff_frequency);
@@ -34,8 +34,8 @@ classdef PositionController
             x_err = (target_state(1) - current_state(1));
             y_err = (target_state(2) - current_state(2));
             
-            x_vd = (x_err * cos(psi) + y_err * sin(psi));
-            y_vd = (y_err * cos(psi) - x_err * sin(psi));
+            x_vd = (x_err * cos(psi) + y_err * sin(psi)) * 180/pi;
+            y_vd = (y_err * cos(psi) - x_err * sin(psi)) * 180/pi;
             
             % x_err = (target_state(1) - current_state(1));
             % y_err = (target_state(2) - current_state(2));
