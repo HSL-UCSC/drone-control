@@ -26,30 +26,32 @@ classdef PositionController
     
     function [ax, ay, az] = control(obj, target_state, current_state, dt)
       
-      phi = current_state(4);
-      theta = current_state(5);
       psi = current_state(6);
-      us = current_state(7);
-      vd = current_state(8);
-      wd = current_state(9);
-      
-      Rib = [cos(theta)*cos(psi), sin(phi)*sin(theta)*cos(psi)-cos(phi)*sin(psi), cos(phi)*sin(theta)*cos(psi)+sin(phi)*sin(psi);
-        cos(theta)*sin(psi), sin(phi)*sin(theta)*sin(psi)+cos(phi)*cos(psi), cos(phi)*sin(theta)*sin(psi)-sin(phi)*cos(psi);
-        -sin(theta), sin(phi)*cos(theta), cos(phi)*cos(theta)];
+      u = current_state(7);
+      v = current_state(8);
+      w = current_state(9);
       
       x_err = (target_state(1) - current_state(1));
       y_err = (target_state(2) - current_state(2));
-      z_err = (target_state(3) - current_state(3));
       
-      x_vd = (x_err * cos(psi) + y_err * sin(psi));
-      y_vd = (y_err * cos(psi) - x_err * sin(psi));
+      xs_body = (current_state(1) * cos(psi) + current_state(2) * sin(psi));
+      ys_body = (current_state(2) * cos(psi) - current_state(1) * sin(psi));
       
-      us_body = (us * cos(psi) + vd * sin(psi));
-      vs_body = (vs * cos(psi) - ud * sin(psi));
+      xd_body = (target_state(1) * cos(psi) + target_state(2) * sin(psi));
+      yd_body = (target_state(2) * cos(psi) - target_state(1) * sin(psi));
       
-      [ax, ~] = obj.x_pid.control(x_vd, us_body, dt);
-      [ay, ~] = obj.y_pid.control(y_vd, vs_body, dt);
-      [az, ~] = obj.z_pid.control(target_state(3), current_state(3), dt);
+      % x_err = (target_state(1) - current_state(1));
+      % y_err = (target_state(2) - current_state(2));
+      %
+      % xd_b = (target_state(1) * cos(psi) + target_state(2) * sin(psi));
+      % yd_b = (target_state(2) * cos(psi) - target_state(1) * sin(psi));
+      %
+      % x_b = (current_state(1) * cos(psi) + current_state(2) * sin(psi));
+      % y_b = (current_state(2) * cos(psi) - current_state(1) * sin(psi));
+      
+      [vx, ~] = obj.x_pid.control(xd_body, xs_body, dt);
+      [vy, ~] = obj.y_pid.control(yd_body, ys_body, dt);
+      [vz, ~] = obj.z_pid.control(target_state(3), current_state(3), dt);
     end
     
   end
