@@ -42,9 +42,9 @@ classdef Betaflight < Interfaces.Multirotor
       % Roll: 1000-2000 (1000 left, 1500 mid, 2000 right)
       % Pitch: 1000-2000 (1000 forward, 1500 mid, 2000 reverse)
       % Yaw: 1000-2000 (1000 left, 1500 mid, 2000 right)
-      attitude_scaling = 250 / obj.max_angle;
-      thr_scaling = 500;
-      comm_thr_d = max(1500, min(2000, 1000 + thr_scaling * comm_thr_d));
+      attitude_scaling = 500 / (40);
+      thr_scaling = 500/(50);
+      comm_thr_d = max(1500, min(2000, 1500 + thr_scaling * comm_thr_d));
       comm_phi_d = max(1000, min(2000, 1500 + attitude_scaling * comm_phi_d));
       comm_theta_d = max(1000, min(2000, 1500 + attitude_scaling * comm_theta_d));
       comm_yaw_d = max(1000, min(2000, 1500 + attitude_scaling * comm_yaw_d));

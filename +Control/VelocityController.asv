@@ -19,20 +19,20 @@ classdef VelocityController
         
         x_gains = Control.Gains(2, 0, 0);
         y_gains = Control.Gains(2, 0, 0);
-        z_gains = Control.Gains(2, 0, 0);
+        z_gains = Control.Gains(2, .5, 0);
         
-        vx_gains = Control.Gains(4, 0, 0);
-        vy_gains = Control.Gains(4, 0, 0);
-        vz_gains = Control.Gains(5, 2, 0);
+        vx_gains = Control.Gains(25, 1, 0);
+        vy_gains = Control.Gains(25, 1, 0);
+        vz_gains = Control.Gains(25, 15, 0);
       end
       
-      obj.x_pid = Control.PID(x_gains.kp, x_gains.ki, x_gains.kd, -1, 1, 0, sample_frequency, cutoff_frequency);
-      obj.y_pid = Control.PID(y_gains.kp, y_gains.ki, y_gains.kd, -1, 1, 0, sample_frequency, cutoff_frequency);
-      obj.z_pid = Control.PID(z_gains.kp, z_gains.ki, z_gains.kd, -.5, 1, 0, sample_frequency, cutoff_frequency);
+      obj.x_pid = Control.PID(x_gains.kp, x_gains.ki, x_gains.kd, -20, 1, sample_frequency, cutoff_frequency);
+      obj.y_pid = Control.PID(y_gains.kp, y_gains.ki, y_gains.kd, -1, 1, sample_frequency, cutoff_frequency);
+      obj.z_pid = Control.PID(z_gains.kp, z_gains.ki, z_gains.kd, -1, 1, sample_frequency, cutoff_frequency);
       
-      obj.vx_pid = Control.PID(vx_gains.kp, vx_gains.ki, vx_gains.kd, -20, 20, 0, sample_frequency, cutoff_frequency);
-      obj.vy_pid = Control.PID(vy_gains.kp, vy_gains.ki, vy_gains.kd, -20, 20, 0, sample_frequency, cutoff_frequency);
-      obj.vz_pid = Control.PID(vz_gains.kp, vz_gains.ki, vz_gains.kd, -20, 20, 0, sample_frequency, cutoff_frequency);
+      obj.vx_pid = Control.PID(vx_gains.kp, vx_gains.ki, vx_gains.kd, -20, 20, sample_frequency, cutoff_frequency);
+      obj.vy_pid = Control.PID(vy_gains.kp, vy_gains.ki, vy_gains.kd, -20, 20, sample_frequency, cutoff_frequency);
+      obj.vz_pid = Control.PID(vz_gains.kp, vz_gains.ki, vz_gains.kd, -1, 1, sample_frequency, cutoff_frequency);
     end
     
     function [vx, vy, vz] = control(obj, target_state, current_state, dt)
@@ -73,6 +73,8 @@ classdef VelocityController
       [vx, ~] = obj.vx_pid.control(body_vxd, body_vx, dt);
       [vy, ~] = obj.vy_pid.control(body_vyd, body_vy, dt);
       [vz, ~] = obj.vz_pid.control(body_vzd, w, dt);
+      vx = -vx;
+      vy = -vy;
     end
     
   end
